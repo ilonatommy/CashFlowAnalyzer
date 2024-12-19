@@ -1,0 +1,54 @@
+@page "/security/register"
+@using CashFlowAnalyzer.Shared.Models
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject IAccountService AccountService
+
+<div class="d-flex justify-content-center mt-5">
+    <div class="card p-4" style="width: 400px;">
+        <EditForm Model="registerModel" OnValidSubmit="HandleRegister">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <InputText id="username" class="form-control" @bind-Value="registerModel.Username" />
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <InputText id="password" type="password" class="form-control" @bind-Value="registerModel.Password" />
+            </div>
+            <div class="mb-3">
+                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                <InputText id="confirmPassword" type="password" class="form-control" @bind-Value="registerModel.ConfirmPassword" />
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Register</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private string returnUrl = "/";
+    private RegisterModel registerModel = new RegisterModel();
+
+    protected override void OnInitialized()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        returnUrl = query["returnUrl"] ?? "/";
+    }
+
+    private async Task HandleRegister()
+    {
+        var success = await AccountService.Register(registerModel);
+        if (success)
+        {
+            Navigation.NavigateTo($"/Identity/Account/Login?returnUrl={returnUrl}");
+        }
+        else
+        {
+            // ToDo: Handle registration failure
+            Console.WriteLine($"Logging failed");
+        }
+    }
+}

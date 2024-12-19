@@ -1,0 +1,77 @@
+@page "/Identity/Account/Login"
+@using CashFlowAnalyzer.Client.Services
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject IAccountService AccountService
+
+
+<div class="d-flex justify-content-center mt-5">
+    <div class="card p-4" style="width: 400px;">
+        <EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="loginForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <InputText id="username" class="form-control" @bind-Value="loginModel.Username" />
+                <ValidationMessage For="@(() => loginModel.Username)" />
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <InputText id="password" type="password" class="form-control" @bind-Value="loginModel.Password" />
+                <ValidationMessage For="@(() => loginModel.Password)" />
+            </div>
+            <div class="mb-3">
+                <button type="submit" disabled="@loading" class="btn btn-primary w-100">
+                    @if (loading) 
+                    {
+                        <span class="spinner-border spinner-border-sm mr-1"></span>
+                    }
+                    Login
+                </button>
+            </div>
+            <div class="mb-3">
+                <NavLink href="security/register" class="btn btn-link">Register</NavLink>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private bool loading;
+    private string returnUrl = "/";
+    private LoginModel loginModel = new();
+
+    protected override void OnInitialized()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        returnUrl = query["returnUrl"] ?? "/";
+    }
+
+    private async Task HandleLogin()
+    {
+        try
+        {
+            loading = true;
+            var success = await AccountService.Login(loginModel);
+            if (success)
+            {
+                Navigation.NavigateTo(returnUrl);
+            }
+            else
+            {
+                loading = false;
+                // ToDo: Handle login failure
+                Console.WriteLine($"Logging failed");
+            }
+        }
+        catch (Exception ex)
+        {
+            // ToDo: this should be a popup component
+            Console.WriteLine(ex.Message);
+            loading = false;
+            StateHasChanged();
+        }
+    }
+}
