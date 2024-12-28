@@ -4,7 +4,7 @@ namespace CashFlowAnalyzer.Client.Services;
 
 public interface IAccountService
 {
-    Task<bool> Login(LoginModel model);
-    Task<bool> Logout();
-    Task<bool> Register(RegisterModel model);
+    Task<AccountServiceResult> Login(LoginModel model);
+    Task<AccountServiceResult> Logout();
+    Task<AccountServiceResult> Register(RegisterModel model);
 }

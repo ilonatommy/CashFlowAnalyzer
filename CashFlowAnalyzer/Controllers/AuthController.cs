@@ -20,6 +20,10 @@ namespace CashFlowAnalyzer.Server.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
+            if (model == null)
+            {
+                return BadRequest("Invalid client request");
+            }
             var user = await _userManager.FindByNameAsync(model.Username);
             if (user != null)
             {
@@ -32,6 +36,13 @@ namespace CashFlowAnalyzer.Server.Controllers
             return Unauthorized();
         }
 
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            await _signInManager.SignOutAsync();
+            return Ok("Logout successful");
+        }
+
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
@@ -42,7 +53,13 @@ namespace CashFlowAnalyzer.Server.Controllers
                 await _signInManager.SignInAsync(user, isPersistent: false);
                 return Ok();
             }
-            return BadRequest(result.Errors);
+            var errors = new List<string>();
+            foreach (var error in result.Errors)
+            {
+                errors.Add(error.Description);
+            }
+
+            return BadRequest(errors);
         }
     }
 }

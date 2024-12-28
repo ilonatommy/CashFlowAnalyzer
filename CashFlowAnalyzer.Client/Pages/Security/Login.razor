@@ -1,4 +1,6 @@
 @page "/Identity/Account/Login"
+@* custom loginForm paths issue: *@
+@* https://github.com/dotnet/aspnetcore/issues/58811 *@
 @using CashFlowAnalyzer.Client.Services
 @inject NavigationManager Navigation
 @inject HttpClient Http
@@ -34,11 +36,23 @@
                 <NavLink href="security/register" class="btn btn-link">Register</NavLink>
             </div>
         </EditForm>
+        @if (errors != null && errors.Count > 0)
+        {
+            <div class="alert alert-danger mt-3">
+                <ul>
+                    @foreach (var error in errors)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
     </div>
 </div>
 
 @code {
     private bool loading;
+    private List<string>? errors;
     private string returnUrl = "/";
     private LoginModel loginModel = new();
 
@@ -54,15 +68,15 @@
         try
         {
             loading = true;
-            var success = await AccountService.Login(loginModel);
-            if (success)
+            var result = await AccountService.Login(loginModel);
+            if (result.Success)
             {
                 Navigation.NavigateTo(returnUrl);
             }
             else
             {
                 loading = false;
-                // ToDo: Handle login failure
+                errors = result.Errors;
                 Console.WriteLine($"Logging failed");
             }
         }

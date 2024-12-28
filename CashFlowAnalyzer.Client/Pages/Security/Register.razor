@@ -24,11 +24,23 @@
             </div>
             <button type="submit" class="btn btn-primary w-100">Register</button>
         </EditForm>
+        @if (errors != null && errors.Count > 0)
+        {
+            <div class="alert alert-danger mt-3">
+                <ul>
+                    @foreach (var error in errors)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
     </div>
 </div>
 
 @code {
     private string returnUrl = "/";
+    private List<string>? errors;
     private RegisterModel registerModel = new RegisterModel();
 
     protected override void OnInitialized()
@@ -40,14 +52,14 @@
 
     private async Task HandleRegister()
     {
-        var success = await AccountService.Register(registerModel);
-        if (success)
+        var result = await AccountService.Register(registerModel);
+        if (result.Success)
         {
             Navigation.NavigateTo($"/Identity/Account/Login?returnUrl={returnUrl}");
         }
         else
         {
-            // ToDo: Handle registration failure
+            errors = result.Errors;
             Console.WriteLine($"Logging failed");
         }
     }

@@ -1,4 +1,10 @@
 ﻿@inherits LayoutComponentBase
+@* Issue: Cannot provide a value for property 'AccountService' on type 
+'CashFlowAnalyzer.Client.Layout.MainLayout'. There is no registered
+service of type 'CashFlowAnalyzer.Client.Services.AccountService'. *@
+@* @inject NavigationManager Navigation
+@inject AccountService AccountService
+@inject AuthenticationStateProvider AuthenticationStateProvider *@
 
 <div class="page">
     <div class="sidebar">
@@ -7,6 +13,10 @@
 
     <main>
         <div class="top-row px-4">
+            @* @if (isAuthenticated)
+            {
+                <button class="btn btn-danger" @onclick="Logout">Logout</button>
+            } *@
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 
@@ -21,3 +31,19 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@* @code {
+    private bool isAuthenticated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity.IsAuthenticated;
+    }
+
+    private async Task Logout()
+    {
+        await AccountService.Logout();
+        Navigation.NavigateTo("/Identity/Account/Login");
+    }
+} *@
