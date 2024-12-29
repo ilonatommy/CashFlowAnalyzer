@@ -1,0 +1,71 @@
+﻿@page "/dashboard"
+@using CashFlowAnalyzer.Client.FinancialData
+@attribute [Authorize]
+@inject SpreadsheetReader SpreadsheetReader
+
+<PageTitle>Dashboard</PageTitle>
+
+<h1>Dashboard</h1>
+
+<InputFile OnChange="HandleFileSelected" />
+
+@if (financialRecords == null || financialRecords.Count == 0)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Recipient Name</th>
+                <th>Value</th>
+                <th>Transaction Currency</th>
+                <th>Target Currency Value</th>
+                <th>Category</th>
+                <th>Bank</th>
+                <th>Payer</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var record in financialRecords)
+            {
+                <tr>
+                    <td>@record.ProcessingDate.ToShortDateString()</td>
+                    <td>@record.Recipient.Name</td>
+                    <td>@record.Value</td>
+                    <td>@record.TransactionCurrency</td>
+                    <td>@record.ConvertedValue</td>
+                    <td>@record.Category.DisplayName</td>
+                    <td>@record.Bank</td>
+                    <td>@record.Payer</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private string payer = "me"; // ToDo: ThisShouldBeManualInputFromEditableDropdown
+    private ICurrency defaultCurrency = new CurrencyCZK(); // ToDo: same as above
+    private FinancialRecordMapper mapper;
+    private List<FinancialRecord> financialRecords;
+    protected override async Task OnInitializedAsync()
+    {
+        // ToDo: mapper should refresh on payer/currency change
+        mapper = new FinancialRecordMapper(defaultCurrency, payer);
+        financialRecords = new List<FinancialRecord>();
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        using var stream = file.OpenReadStream();
+        var bankRecords = await SpreadsheetReader.ReadCeskaSporitelnaSpreadsheetAsync(stream);
+        foreach (var record in bankRecords)
+        {
+            financialRecords.Add(mapper.Map(record));
+        }
+    }
+}

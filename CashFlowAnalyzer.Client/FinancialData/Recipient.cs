@@ -1,0 +1,1 @@
+public record Recipient(string Name, int AccountNumber);

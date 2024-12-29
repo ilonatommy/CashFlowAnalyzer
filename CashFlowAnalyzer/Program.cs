@@ -9,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 // because of prerendering, we have to re-register Client's services on the server:
 // see: https://github.com/dotnet/aspnetcore/issues/51432
 builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<SpreadsheetReader>();
 
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
