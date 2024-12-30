@@ -1,3 +1,4 @@
+using System.Globalization;
 using CashFlowAnalyzer.Client.FinancialData;
 using OfficeOpenXml;
 
@@ -45,7 +46,7 @@ public class SpreadsheetReader
                                     col = worksheet.Dimension.End.Row;
                                     break;
                                 }
-                                record.ProcessingDate = DateTime.Parse(cellValue);
+                                record.ProcessingDate = ParseDate(cellValue);
                                 break;
                             case "Partner Name":
                                 record.PartnerName = cellValue;
@@ -81,5 +82,17 @@ public class SpreadsheetReader
             }
         }
         return result;
+    }
+
+    private string[] dateFormats = ["dd.MM.yyyy", "MM/dd/yyyy"];
+
+    private DateTime ParseDate(string cellValue)
+    {
+        if (DateTime.TryParse(cellValue, out var processingDate) ||
+            DateTime.TryParseExact(cellValue, dateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out processingDate))
+        {
+            return processingDate;
+        }
+        throw new FormatException($"Invalid date format: {cellValue}");
     }
 }

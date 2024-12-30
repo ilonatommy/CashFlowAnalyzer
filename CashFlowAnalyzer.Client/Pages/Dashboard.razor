@@ -7,7 +7,29 @@
 
 <h1>Dashboard</h1>
 
-<InputFile OnChange="HandleFileSelected" />
+<div class="mb-3">
+    <label for="currencySelect" class="form-label">Select Default Currency</label>
+    <select id="currencySelect" @onchange="OnCurrencySelectionChanged" class="form-select">
+        <option value="">-- Select a Currency --</option>
+        @foreach (var currency in Currencies.GetAllCurrencies())
+        {
+            <option value="@currency">@currency.ToString()</option>
+        }
+    </select>
+</div>
+
+<div class="mb-3">
+    <label for="bankSelect" class="form-label">Select Bank</label>
+    <select id="bankSelect" @bind="selectedBank" class="form-select">
+        <option value="">-- Select a Bank --</option>
+        @foreach (var bank in Enum.GetValues(typeof(Bank)).Cast<Bank>())
+        {
+            <option value="@bank">@bank.ToFriendlyString()</option>
+        }
+    </select>
+</div>
+
+<InputFile OnChange="HandleFileSelected" class="form-control" disabled="@((selectedBank is null) && (defaultCurrency is null))" />
 
 @if (financialRecords == null || financialRecords.Count == 0)
 {
@@ -15,6 +37,7 @@
 }
 else
 {
+    <p>Please, review the categories</p>
     <table class="table">
         <thead>
             <tr>
@@ -24,8 +47,8 @@ else
                 <th>Transaction Currency</th>
                 <th>Target Currency Value</th>
                 <th>Category</th>
-                <th>Bank</th>
-                <th>Payer</th>
+                <th>Sharing Mode</th>
+                <th>Save</th>
             </tr>
         </thead>
         <tbody>
@@ -36,25 +59,53 @@ else
                     <td>@record.Recipient.Name</td>
                     <td>@record.Value</td>
                     <td>@record.TransactionCurrency</td>
-                    <td>@record.ConvertedValue</td>
-                    <td>@record.Category.DisplayName</td>
-                    <td>@record.Bank</td>
-                    <td>@record.Payer</td>
+                    <td>@record.ConvertedValue.ToString("F2")</td>
+                    <td>
+                        <select @onchange="(e) => OnCategorySelectionChanges(record, e)" class="form-select">
+                            @foreach (var category in Categories.GetAllCategories())
+                            {
+                                @* <option value="@category">@category</option> *@
+                                <option value="@category.ToString()" selected="@((record.Category.ToString() == category.ToString()) ? "selected" : null)">@category</option>
+                            }
+                        </select>
+                    </td>
+                    <td>
+                        <select @onchange="(e) => OnSharingModeSelectionChanges(record, e)" class="form-select">
+                            @foreach (var mode in Enum.GetValues(typeof(SharingMode)).Cast<SharingMode>())
+                            {
+                                <option value="@mode.ToString()" selected="@((record.Category.Mode.ToString() == mode.ToString()) ? "selected" : null)">@mode</option>
+                            }
+                        </select>
+                    </td>
+                    <td>
+                        <input type="checkbox" checked="@((ShouldBeSaved(record)))" disabled />
+                    </td>
                 </tr>
             }
         </tbody>
     </table>
+    @if (isPreviewMode)
+    {
+        <button @onclick="TogglePreviewMode" class="btn btn-secondary">Edit</button>
+        <button @onclick="SaveData" class="btn btn-success">Save</button>
+    }
+    else
+    {
+        <button @onclick="TogglePreviewMode" class="btn btn-primary">Preview</button>
+    }
 }
 
 @code {
+    private bool isPreviewMode = false;
     private string payer = "me"; // ToDo: ThisShouldBeManualInputFromEditableDropdown
-    private ICurrency defaultCurrency = new CurrencyCZK(); // ToDo: same as above
+    private ICurrency defaultCurrency = Currencies.GetDefaultCurrency();
     private FinancialRecordMapper mapper;
+    private List<FinancialRecord> spreadsheetFinancialRecords;
     private List<FinancialRecord> financialRecords;
+    private Bank? selectedBank;
     protected override async Task OnInitializedAsync()
     {
-        // ToDo: mapper should refresh on payer/currency change
-        mapper = new FinancialRecordMapper(defaultCurrency, payer);
+        spreadsheetFinancialRecords = new List<FinancialRecord>();
         financialRecords = new List<FinancialRecord>();
     }
 
@@ -62,10 +113,65 @@ else
     {
         var file = e.File;
         using var stream = file.OpenReadStream();
+        // ToDo: bankRecords should be saved in a variable in case mapper changed by changing the currency
         var bankRecords = await SpreadsheetReader.ReadCeskaSporitelnaSpreadsheetAsync(stream);
         foreach (var record in bankRecords)
         {
-            financialRecords.Add(mapper.Map(record));
+            spreadsheetFinancialRecords.Add(mapper.Map(record));
         }
+        financialRecords = spreadsheetFinancialRecords;
+    }
+
+    private void OnCategorySelectionChanges(FinancialRecord record, ChangeEventArgs e)
+    {
+        var selectedCategory = e.Value.ToString();
+        var category = Categories.GetAllCategories().FirstOrDefault(c => c.Type.ToString() == selectedCategory);
+        if (category != null)
+        {
+            record.Category = category;
+        }
+    }
+
+    private void OnSharingModeSelectionChanges(FinancialRecord record, ChangeEventArgs e)
+    {
+        var selectedMode = e.Value.ToString();
+        if (Enum.TryParse(selectedMode, out SharingMode mode))
+        {
+            record.Category.Mode = mode;
+        }
+    }
+
+    private bool ShouldBeSaved(FinancialRecord record) =>
+        (record.Category.Mode != SharingMode.Ignored && record.Value != 0);
+
+    private void OnCurrencySelectionChanged(ChangeEventArgs e)
+    {
+        var selectedCurrency = e.Value.ToString();
+        defaultCurrency = Currencies.GetAllCurrencies().FirstOrDefault(c => c.ToString() == selectedCurrency);
+        mapper = new FinancialRecordMapper(defaultCurrency, payer);
+    }
+
+    private void TogglePreviewMode()
+    {
+        isPreviewMode = !isPreviewMode;
+        if (isPreviewMode)
+        {
+            financialRecords = GetFilteredRecords().ToList();
+        }
+        else
+        {
+            financialRecords = spreadsheetFinancialRecords;
+        }
+    }
+    
+    private IEnumerable<FinancialRecord> GetFilteredRecords()
+    {
+        return financialRecords.Where(record => ShouldBeSaved(record));
+    }
+
+    private async Task SaveData()
+    {
+        // ToDo: Implement the logic to save the data to the database
+        Console.WriteLine("Saving data to the database...");
     }
 }

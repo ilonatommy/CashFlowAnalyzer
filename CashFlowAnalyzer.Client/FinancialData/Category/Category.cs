@@ -1,68 +1,59 @@
+
+using System.ComponentModel;
+using System.Globalization;
+
 namespace CashFlowAnalyzer.Client.FinancialData;
 
+
+[TypeConverter(typeof(CategoryConverter))]
 public class Category
 {
-    public string DisplayName { get; set; } = string.Empty;
+    public CategoryType Type { get; set; }
     public SharingMode Mode { get; set; }
 
-    public Category(string displayName, SharingMode mode)
+    public Category(CategoryType type, SharingMode mode)
     {
-        DisplayName = displayName;
+        Type = type;
         Mode = mode;
     }
+    public override string ToString() => Type.ToFriendlyString();
 }
 
-public static class Categories
+// Blazor framework is trying to bind a Category object directly to a <select> element,
+// but it doesn't know how to convert between the Category object and a string
+public class CategoryConverter : TypeConverter
 {
-    /// <summary>
-    /// electricity, internet, gas, SVJ
-    /// </summary>
-    public static Category Fees => new("Fees", SharingMode.Shared);
-    public static Category PhoneBills => new("Phone bills", SharingMode.Private);
-    public static Category Groceries => new("Groceries", SharingMode.Shared);
+    public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+    {
+        return sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+    }
 
-    /// <summary>
-    /// ignored in the summary, same as internal transfer
-    /// </summary>
-    public static Category OwnTransfer => new("Own transfer", SharingMode.Ignored);
+    public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
+    {
+        if (value is string str)
+        {
+            var parts = str.Split(new[] { " (" }, StringSplitOptions.None);
+            if (parts.Length == 2)
+            {
+                var type = (CategoryType)Enum.Parse(typeof(CategoryType), parts[0]);
+                var mode = (SharingMode)Enum.Parse(typeof(SharingMode), parts[1].TrimEnd(')'));
+                return new Category(type, mode);
+            }
+        }
+        return base.ConvertFrom(context, culture, value);
+    }
 
-    /// <summary>
-    /// ignored in the summary
-    /// </summary>
-    public static Category Income => new("Income", SharingMode.Ignored);
+    public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
+    {
+        return destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
+    }
 
-    /// <summary>
-    /// eating out
-    /// </summary>
-    public static Category Restaurant => new("Restaurant", SharingMode.RequiresReview);
-
-    /// <summary>
-    /// going out, drinking out (not food)
-    /// </summary>
-    public static Category Bar => new("Bar", SharingMode.RequiresReview);
-
-    /// <summary>
-    /// including multisport
-    /// </summary>
-    public static Category Sports => new("Sports", SharingMode.RequiresReview);
-
-    /// <summary>
-    /// flights, car rental, taxi, litacka
-    /// </summary>
-    public static Category Transport => new("Transport", SharingMode.RequiresReview);
-
-    /// <summary>
-    /// bike/car repairs, hairdressers, dry cleaners, flat renovation
-    /// </summary>
-    public static Category Services => new("Services", SharingMode.RequiresReview);
-
-    /// <summary>
-    /// bDay presents etc
-    /// </summary>
-    public static Category Gifts => new("Gift", SharingMode.RequiresReview);
-
-    /// <summary>
-    /// requires manual categorizing
-    /// </summary>
-    public static Category RequiresReview => new("unknown", SharingMode.RequiresReview);
+    public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
+    {
+        if (destinationType == typeof(string) && value is Category category)
+        {
+            return category.ToString();
+        }
+        return base.ConvertTo(context, culture, value, destinationType);
+    }
 }

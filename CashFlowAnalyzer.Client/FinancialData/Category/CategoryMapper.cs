@@ -2,27 +2,28 @@ using CashFlowAnalyzer.Client.FinancialData;
 
 public class CeskaSporitelnaCategoryMapper : ICategoryMapper
 {
-    // ToDo: save the map in db and mechanism to add own categories
-    private readonly Dictionary<string, Category> map = new()
+    // ToDo: save the map in db and mechanism to add own CategoryType
+    private readonly Dictionary<string, CategoryType> map = new()
     {
-        { "Fees", Categories.Fees },
-        { "Phone bills", Categories.PhoneBills },
-        { "Internal transfer", Categories.OwnTransfer },
-        { "Groceries", Categories.Groceries },
-        { "Other Income", Categories.Income },
-        { "Own Transfer", Categories.OwnTransfer },
-        { "Restaurant/Café", Categories.Restaurant },
-        { "Capitalization products", Categories.Income },
-        { "Maintenance/Service", Categories.Services },
-        { "Online Shops", Categories.RequiresReview }
+        { "Fees", CategoryType.Fees },
+        { "Phone bills", CategoryType.PhoneBills },
+        { "Internal transfer", CategoryType.OwnTransfer },
+        { "Groceries", CategoryType.Groceries },
+        { "Other Income", CategoryType.Income },
+        { "Own Transfer", CategoryType.OwnTransfer },
+        { "Restaurant/Café", CategoryType.Restaurant },
+        { "Capitalization products", CategoryType.Income },
+        { "Maintenance/Service", CategoryType.Services },
+        { "Online Shops", CategoryType.RequiresReview }
     };
 
     public Category Map(string category)
     {
-        if (map.TryGetValue(category, out var mappedCategory))
+        CategoryType categoryType;
+        if (!map.TryGetValue(category, out categoryType))
         {
-            return mappedCategory;
+            categoryType = CategoryType.RequiresReview;
         }
-        return Categories.RequiresReview;
+        return Categories.GetAllCategories().First(c => c.Type == categoryType);
     }
 }

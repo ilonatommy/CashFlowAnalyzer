@@ -7,4 +7,5 @@ public class CurrencyEuro : ICurrency
     // ToDo: this should be pulled from converter API
     private decimal rate = 1.0M;
     public decimal RateToEuro { get => rate; set => rate = value; }
+    public override string ToString() => Name;
 }
