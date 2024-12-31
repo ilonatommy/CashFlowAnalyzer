@@ -44,6 +44,6 @@ service of type 'CashFlowAnalyzer.Client.Services.AccountService'. *@
     private async Task Logout()
     {
         await AccountService.Logout();
-        Navigation.NavigateTo("/Identity/Account/Login");
+        Navigation.NavigateTo("/Login");
     }
 } *@

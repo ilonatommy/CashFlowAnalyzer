@@ -55,7 +55,7 @@
         var result = await AccountService.Register(registerModel);
         if (result.Success)
         {
-            Navigation.NavigateTo($"/Identity/Account/Login?returnUrl={returnUrl}");
+            Navigation.NavigateTo($"/Login?returnUrl={returnUrl}");
         }
         else
         {

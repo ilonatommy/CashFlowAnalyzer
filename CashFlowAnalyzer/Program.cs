@@ -28,6 +28,8 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.ExpireTimeSpan = TimeSpan.FromDays(14);
     options.SlidingExpiration = true;
+    options.LoginPath = "/Login";
+    options.LogoutPath = "/Logout";
 });
 
 builder.Services.AddControllers();

@@ -19,12 +19,4 @@ builder.Services.AddScoped<SpreadsheetReader>();
 // Supply HttpClient instances that include access tokens when making requests to the server project
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("CashFlowAnalyzer.ServerAPI"));
 
-builder.Services.AddApiAuthorization(options =>
-{
-    // https://github.com/dotnet/AspNetCore.Docs/blob/b1e1428d5899fda009f65e2c4e41dac6a60df7b6/aspnetcore/blazor/security/webassembly/additional-scenarios.md#customize-app-routes
-    // doesn't work because of auto interactivity, see https://github.com/dotnet/aspnetcore/issues/58811
-    options.AuthenticationPaths.LogInPath = "security/login";
-	options.AuthenticationPaths.RegisterPath = "security/register";
-});
-
 await builder.Build().RunAsync();
