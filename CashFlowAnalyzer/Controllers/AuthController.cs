@@ -27,7 +27,7 @@ namespace CashFlowAnalyzer.Server.Controllers
             var user = await _userManager.FindByNameAsync(model.Username);
             if (user != null)
             {
-                var result = await _signInManager.PasswordSignInAsync(user, model.Password, false, false);
+                var result = await _signInManager.PasswordSignInAsync(user, model.Password, true, false);
                 if (result.Succeeded)
                 {
                     return Ok();
