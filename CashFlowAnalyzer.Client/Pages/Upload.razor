@@ -1,11 +1,11 @@
-﻿@page "/dashboard"
+﻿@page "/upload"
 @using CashFlowAnalyzer.Client.FinancialData
 @attribute [Authorize]
 @inject SpreadsheetReader SpreadsheetReader
 
-<PageTitle>Dashboard</PageTitle>
+<PageTitle>Upload</PageTitle>
 
-<h1>Dashboard</h1>
+<h1>Upload</h1>
 
 <div class="mb-3">
     <label for="currencySelect" class="form-label">Select Default Currency</label>
@@ -20,7 +20,7 @@
 
 <div class="mb-3">
     <label for="bankSelect" class="form-label">Select Bank</label>
-    <select id="bankSelect" @bind="selectedBank" class="form-select">
+    <select id="bankSelect" @bind="selectedBank" class="form-select" disabled="@isPreviewMode">
         <option value="">-- Select a Bank --</option>
         @foreach (var bank in Enum.GetValues(typeof(Bank)).Cast<Bank>())
         {
@@ -61,7 +61,7 @@ else
                     <td>@record.TransactionCurrency</td>
                     <td>@record.ConvertedValue.ToString("F2")</td>
                     <td>
-                        <select @onchange="(e) => OnCategorySelectionChanges(record, e)" class="form-select">
+                        <select @onchange="(e) => OnCategorySelectionChanges(record, e)" class="form-select @(record.RequiresReview() ? "red-dropdown" : "")" disabled="@isPreviewMode">
                             @foreach (var category in Categories.GetAllCategories())
                             {
                                 @* <option value="@category">@category</option> *@
@@ -70,10 +70,10 @@ else
                         </select>
                     </td>
                     <td>
-                        <select @onchange="(e) => OnSharingModeSelectionChanges(record, e)" class="form-select">
+                        <select @onchange="(e) => OnSharingModeSelectionChanges(record, e)" class="form-select @(record.Category.RequiresReview() ? "red-dropdown" : "")" disabled="@isPreviewMode">
                             @foreach (var mode in Enum.GetValues(typeof(SharingMode)).Cast<SharingMode>())
                             {
-                                <option value="@mode.ToString()" selected="@((record.Category.Mode.ToString() == mode.ToString()) ? "selected" : null)">@mode</option>
+                                <option value="@mode.ToString()" selected="@((record.Category.Mode.ToString() == mode.ToString()) ? "selected" : null)">@mode.ToFriendlyString()</option>
                             }
                         </select>
                     </td>
@@ -91,7 +91,7 @@ else
     }
     else
     {
-        <button @onclick="TogglePreviewMode" class="btn btn-primary">Preview</button>
+        <button @onclick="TogglePreviewMode" class="btn btn-primary" disabled="@HasRequiresReview()">Preview</button>
     }
 }
 
@@ -102,6 +102,9 @@ else
     private FinancialRecordMapper mapper;
     private List<FinancialRecord> spreadsheetFinancialRecords;
     private List<FinancialRecord> financialRecords;
+
+    // TODo: bankRecords should be more abstract
+    private List<CeskaSporitelnaRecord> bankRecords;
     private Bank? selectedBank;
     protected override async Task OnInitializedAsync()
     {
@@ -113,22 +116,26 @@ else
     {
         var file = e.File;
         using var stream = file.OpenReadStream();
-        // ToDo: bankRecords should be saved in a variable in case mapper changed by changing the currency
-        var bankRecords = await SpreadsheetReader.ReadCeskaSporitelnaSpreadsheetAsync(stream);
-        foreach (var record in bankRecords)
+        switch (selectedBank)
         {
-            spreadsheetFinancialRecords.Add(mapper.Map(record));
-        }
+            case Bank.CeskaSporitelna:
+                bankRecords = await SpreadsheetReader.ReadCeskaSporitelnaSpreadsheetAsync(stream);
+                break;
+            default:
+                throw new NotImplementedException();
+        }   
+        spreadsheetFinancialRecords = mapper.Map(bankRecords);
         financialRecords = spreadsheetFinancialRecords;
     }
 
     private void OnCategorySelectionChanges(FinancialRecord record, ChangeEventArgs e)
     {
         var selectedCategory = e.Value.ToString();
-        var category = Categories.GetAllCategories().FirstOrDefault(c => c.Type.ToString() == selectedCategory);
+        var category = Categories.GetAllCategories().FirstOrDefault(c => c.Type.ToFriendlyString() == selectedCategory);
         if (category != null)
         {
             record.Category = category;
+            StateHasChanged();
         }
     }
 
@@ -138,6 +145,7 @@ else
         if (Enum.TryParse(selectedMode, out SharingMode mode))
         {
             record.Category.Mode = mode;
+            StateHasChanged();
         }
     }
 
@@ -149,8 +157,12 @@ else
         var selectedCurrency = e.Value.ToString();
         defaultCurrency = Currencies.GetAllCurrencies().FirstOrDefault(c => c.ToString() == selectedCurrency);
         mapper = new FinancialRecordMapper(defaultCurrency, payer);
+        if (bankRecords != null)
+        {
+            spreadsheetFinancialRecords = mapper.Map(bankRecords);
+            financialRecords = spreadsheetFinancialRecords;
+        }
     }
-
     private void TogglePreviewMode()
     {
         isPreviewMode = !isPreviewMode;
@@ -168,6 +180,8 @@ else
     {
         return financialRecords.Where(record => ShouldBeSaved(record));
     }
+
+    private bool HasRequiresReview() => financialRecords.Any(record => record.RequiresReview() || record.Category.RequiresReview());
 
     private async Task SaveData()
     {

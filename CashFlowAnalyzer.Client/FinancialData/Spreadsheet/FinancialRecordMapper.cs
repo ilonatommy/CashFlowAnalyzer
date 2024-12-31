@@ -31,6 +31,15 @@ public class FinancialRecordMapper
             Payer = payer
         };
     }
+    public List<FinancialRecord> Map(List<CeskaSporitelnaRecord> spreadsheetRecords)
+    {
+        List<FinancialRecord> financialRecords = new();
+        foreach(var record in spreadsheetRecords)
+        {
+            financialRecords.Add(Map(record));
+        }
+        return financialRecords;
+    }
 
     private int StringToInt(string str)
     {

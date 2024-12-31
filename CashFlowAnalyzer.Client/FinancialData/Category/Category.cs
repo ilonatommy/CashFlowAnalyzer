@@ -1,4 +1,3 @@
-
 using System.ComponentModel;
 using System.Globalization;
 
@@ -17,6 +16,8 @@ public class Category
         Mode = mode;
     }
     public override string ToString() => Type.ToFriendlyString();
+
+    public bool RequiresReview() => Mode == SharingMode.RequiresReview;
 }
 
 // Blazor framework is trying to bind a Category object directly to a <select> element,

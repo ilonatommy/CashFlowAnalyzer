@@ -10,4 +10,6 @@ public sealed class FinancialRecord
     public Category Category { get; set; }
     public Bank Bank { get; set; }
     public string Payer { get; set; } = string.Empty;
+
+    public bool RequiresReview() => Category.Type == CategoryType.RequiresReview;
 }
