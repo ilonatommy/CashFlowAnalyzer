@@ -2,6 +2,7 @@
 @using CashFlowAnalyzer.Client.FinancialData
 @attribute [Authorize]
 @inject SpreadsheetReader SpreadsheetReader
+@inject IFinancialDataService FinancialDataService
 
 <PageTitle>Upload</PageTitle>
 
@@ -29,11 +30,11 @@
     </select>
 </div>
 
-<InputFile OnChange="HandleFileSelected" class="form-control" disabled="@((selectedBank is null) && (defaultCurrency is null))" />
+<InputFile OnChange="HandleFileSelected" key="@(fileInputKey)" class="form-control" disabled="@((selectedBank is null) && (defaultCurrency is null))" />
 
 @if (financialRecords == null || financialRecords.Count == 0)
 {
-    <p><em>Loading...</em></p>
+    <p><em>Waiting for the file...</em></p>
 }
 else
 {
@@ -94,9 +95,27 @@ else
         <button @onclick="TogglePreviewMode" class="btn btn-primary" disabled="@HasRequiresReview()">Preview</button>
     }
 }
+@if (showSuccessMessage)
+{
+    <div class="alert alert-success" role="alert">
+        Records upload was successful.
+        <button type="button" class="btn-close" aria-label="Close" @onclick="CloseSuccessMessage"> </button>
+    </div>
+}
+@if (showErrorMessage)
+{
+    <div class="alert alert-danger" role="alert">
+        Records upload failed.
+        <button type="button" class="btn-close" aria-label="Close" @onclick="CloseErrorMessage"> </button>
+    </div>
+}
 
 @code {
     private bool isPreviewMode = false;
+    private bool isFileLoaded = false;
+    private bool showSuccessMessage = false;
+    private bool showErrorMessage = false;
+    private string fileInputKey = Guid.NewGuid().ToString();
     private string payer = "me"; // ToDo: ThisShouldBeManualInputFromEditableDropdown
     private ICurrency defaultCurrency = Currencies.GetDefaultCurrency();
     private FinancialRecordMapper mapper;
@@ -185,7 +204,40 @@ else
 
     private async Task SaveData()
     {
-        // ToDo: Implement the logic to save the data to the database
-        Console.WriteLine("Saving data to the database...");
+        try
+        {
+            await FinancialDataService.SaveFinancialRecordsAsync(financialRecords);
+            showSuccessMessage = true;
+            CleanUploadView();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving data: {ex.Message}");
+            showErrorMessage = true;
+        }
+    }
+
+    private void CloseSuccessMessage()
+    {
+        showSuccessMessage = false;
+    }
+
+    private void CloseErrorMessage()
+    {
+        showErrorMessage = false;
+    }
+
+    private void CleanUploadView()
+    {
+        // issue: resetting InputFile field does not work neatly:
+        // https://github.com/SteveSandersonMS/BlazorInputFile/issues/2
+        fileInputKey = Guid.NewGuid().ToString();
+        financialRecords = new List<FinancialRecord>();
+        spreadsheetFinancialRecords = new List<FinancialRecord>();
+        selectedBank = null;
+        defaultCurrency = null;
+        isFileLoaded = false;
+        TogglePreviewMode();
+        StateHasChanged();
     }
 }

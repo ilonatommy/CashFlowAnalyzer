@@ -15,6 +15,7 @@ builder.Services.AddHttpClient<ITransactionProvider, ClientTransactionProvider>(
 // Services
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<SpreadsheetReader>();
+builder.Services.AddScoped<IFinancialDataService, FinancialDataService>();
 
 // Supply HttpClient instances that include access tokens when making requests to the server project
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("CashFlowAnalyzer.ServerAPI"));

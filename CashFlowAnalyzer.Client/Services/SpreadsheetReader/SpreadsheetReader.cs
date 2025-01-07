@@ -2,6 +2,8 @@ using System.Globalization;
 using CashFlowAnalyzer.Client.FinancialData;
 using OfficeOpenXml;
 
+namespace CashFlowAnalyzer.Client.Services;
+
 public class SpreadsheetReader
 {
     public SpreadsheetReader()

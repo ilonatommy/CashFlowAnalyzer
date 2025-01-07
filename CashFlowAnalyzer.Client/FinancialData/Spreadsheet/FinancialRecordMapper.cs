@@ -36,7 +36,12 @@ public class FinancialRecordMapper
         List<FinancialRecord> financialRecords = new();
         foreach(var record in spreadsheetRecords)
         {
-            financialRecords.Add(Map(record));
+            var financialRecord = Map(record);
+            // 0-valued fees and incomes are not interesting
+            if (financialRecord.Value != 0)
+            {
+                financialRecords.Add(financialRecord);
+            }
         }
         return financialRecords;
     }

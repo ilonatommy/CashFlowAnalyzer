@@ -17,7 +17,8 @@ public static class Categories
             new Category(CategoryType.Sport, SharingMode.RequiresReview),
             new Category(CategoryType.Transport, SharingMode.RequiresReview),
             new Category(CategoryType.RequiresReview, SharingMode.RequiresReview),
-            new Category(CategoryType.Gifts, SharingMode.RequiresReview)
+            new Category(CategoryType.Gifts, SharingMode.RequiresReview),
+            new Category(CategoryType.Home, SharingMode.Shared)
         };
     }
 }

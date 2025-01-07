@@ -3,6 +3,7 @@ using CashFlowAnalyzer.Server.Data;
 using CashFlowAnalyzer.Shared.Models;
 using CashFlowAnalyzer.Components;
 using CashFlowAnalyzer.Client.Services;
+using CashFlowAnalyzer.Server.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 // see: https://github.com/dotnet/aspnetcore/issues/51432
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<SpreadsheetReader>();
+builder.Services.AddScoped<IFinancialDataService, FinancialDataService>();
+builder.Services.AddScoped<DatabaseService>();
 
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>

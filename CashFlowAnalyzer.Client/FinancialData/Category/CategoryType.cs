@@ -65,6 +65,12 @@ public enum CategoryType
     Gifts,
 
     /// <summary>
+    /// tools, furniture, cleaning utensils etc
+    /// </summary>
+    [Description("Home")]
+    Home,
+
+    /// <summary>
     /// requires manual categorizing
     /// </summary>
     [Description("Requires review")]

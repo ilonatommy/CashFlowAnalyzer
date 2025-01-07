@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace CashFlowAnalyzer.Shared.Models
+namespace CashFlowAnalyzer.Shared.Models;
+
+public class ApplicationUser : IdentityUser
 {
-    public class ApplicationUser : IdentityUser
-    {
-    }
 }

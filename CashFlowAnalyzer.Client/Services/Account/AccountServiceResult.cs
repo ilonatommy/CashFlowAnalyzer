@@ -1,3 +1,5 @@
+namespace CashFlowAnalyzer.Client.Services;
+
 public class AccountServiceResult
 {
     public bool Success { get; set; }

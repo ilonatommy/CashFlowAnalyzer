@@ -15,5 +15,16 @@ namespace CashFlowAnalyzer.Server.Data
             : base(options, operationalStoreOptions)
         {
         }
+
+        public DbSet<FinancialRecordDto> FinancialRecords { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<FinancialRecordDto>(entity => {
+                entity.Property(e => e.Value).HasColumnType("decimal(10,2)");
+            });
+        }
     }
 }
