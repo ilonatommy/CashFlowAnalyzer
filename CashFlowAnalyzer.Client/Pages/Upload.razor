@@ -1,5 +1,6 @@
 ﻿@page "/upload"
 @using CashFlowAnalyzer.Client.FinancialData
+@using CashFlowAnalyzer.Client.Components
 @attribute [Authorize]
 @inject SpreadsheetReader SpreadsheetReader
 @inject IFinancialDataService FinancialDataService
@@ -8,27 +9,22 @@
 
 <h1>Upload</h1>
 
-<div class="mb-3">
-    <label for="currencySelect" class="form-label">Select Default Currency</label>
-    <select id="currencySelect" @onchange="OnCurrencySelectionChanged" class="form-select">
-        <option value="">-- Select a Currency --</option>
-        @foreach (var currency in Currencies.GetAllCurrencies())
-        {
-            <option value="@currency">@currency.ToString()</option>
-        }
-    </select>
-</div>
+<Dropdown TItem="ICurrency"
+          Id="currencySelect"
+          Label="Select Currency"
+          Placeholder="Select Default Currency"
+          Items="Currencies.GetAllCurrencies()"
+          SelectedValue="defaultCurrency"
+          SelectedValueChanged="OnCurrencySelectionChanged" />
 
-<div class="mb-3">
-    <label for="bankSelect" class="form-label">Select Bank</label>
-    <select id="bankSelect" @bind="selectedBank" class="form-select" disabled="@isPreviewMode">
-        <option value="">-- Select a Bank --</option>
-        @foreach (var bank in Enum.GetValues(typeof(Bank)).Cast<Bank>())
-        {
-            <option value="@bank">@bank.ToFriendlyString()</option>
-        }
-    </select>
-</div>
+<Dropdown TItem="Bank?"
+          Id="bankSelect"
+          Label="Select Bank"
+          Placeholder="Select Bank"
+          Items="Enum.GetValues(typeof(Bank)).Cast<Bank?>()"
+          SelectedValue="selectedBank"
+          SelectedValueChanged="OnBankSelectionChanged"
+          IsDisabled="isPreviewMode" />
 
 <InputFile OnChange="HandleFileSelected" key="@(fileInputKey)" class="form-control" disabled="@((selectedBank is null) && (defaultCurrency is null))" />
 
@@ -62,21 +58,22 @@ else
                     <td>@record.TransactionCurrency</td>
                     <td>@record.ConvertedValue.ToString("F2")</td>
                     <td>
-                        <select @onchange="(e) => OnCategorySelectionChanges(record, e)" class="form-select @(record.RequiresReview() ? "red-dropdown" : "")" disabled="@isPreviewMode">
-                            @foreach (var category in Categories.GetAllCategories())
-                            {
-                                @* <option value="@category">@category</option> *@
-                                <option value="@category.ToString()" selected="@((record.Category.ToString() == category.ToString()) ? "selected" : null)">@category</option>
-                            }
-                        </select>
+                        <Dropdown TItem="CategoryType"
+                            Placeholder="Select a Category"
+                            CssClass="@(record.RequiresReview() ? "red-dropdown" : "")"
+                            Items="Enum.GetValues(typeof(CategoryType)).Cast<CategoryType>()"
+                            SelectedValue="record.Category.Type"
+                            SelectedValueChanged="EventCallback.Factory.Create<CategoryType>(this, value => OnCategorySelectionChanged(record, value))"
+                            IsDisabled="isPreviewMode" />
                     </td>
                     <td>
-                        <select @onchange="(e) => OnSharingModeSelectionChanges(record, e)" class="form-select @(record.Category.RequiresReview() ? "red-dropdown" : "")" disabled="@isPreviewMode">
-                            @foreach (var mode in Enum.GetValues(typeof(SharingMode)).Cast<SharingMode>())
-                            {
-                                <option value="@mode.ToString()" selected="@((record.Category.Mode.ToString() == mode.ToString()) ? "selected" : null)">@mode.ToFriendlyString()</option>
-                            }
-                        </select>
+                        <Dropdown TItem="SharingMode"
+                            Placeholder="Select a Sharing Mode"
+                            CssClass="@(record.Category.RequiresReview() ? "red-dropdown" : "")"
+                            Items="Enum.GetValues(typeof(SharingMode)).Cast<SharingMode>()"
+                            SelectedValue="record.Category.Mode"
+                            SelectedValueChanged="EventCallback.Factory.Create<SharingMode>(this, value => OnSharingModeSelectionChanged(record, value))"
+                            IsDisabled="isPreviewMode" />
                     </td>
                     <td>
                         <input type="checkbox" checked="@((ShouldBeSaved(record)))" disabled />
@@ -147,10 +144,9 @@ else
         financialRecords = spreadsheetFinancialRecords;
     }
 
-    private void OnCategorySelectionChanges(FinancialRecord record, ChangeEventArgs e)
+    private void OnCategorySelectionChanged(FinancialRecord record, CategoryType selectedCategoryType)
     {
-        var selectedCategory = e.Value.ToString();
-        var category = Categories.GetAllCategories().FirstOrDefault(c => c.Type.ToFriendlyString() == selectedCategory);
+        var category = Categories.GetAllCategories().FirstOrDefault(c => c.Type == selectedCategoryType);
         if (category != null)
         {
             record.Category = category;
@@ -158,23 +154,21 @@ else
         }
     }
 
-    private void OnSharingModeSelectionChanges(FinancialRecord record, ChangeEventArgs e)
+    private void OnSharingModeSelectionChanged(FinancialRecord record, SharingMode selectedSharingMode)
     {
-        var selectedMode = e.Value.ToString();
-        if (Enum.TryParse(selectedMode, out SharingMode mode))
-        {
-            record.Category.Mode = mode;
-            StateHasChanged();
-        }
+        record.Category.Mode = selectedSharingMode;
+        StateHasChanged();
     }
 
     private bool ShouldBeSaved(FinancialRecord record) =>
         (record.Category.Mode != SharingMode.Ignored && record.Value != 0);
 
-    private void OnCurrencySelectionChanged(ChangeEventArgs e)
+    private void OnCurrencySelectionChanged(ICurrency? value)
     {
-        var selectedCurrency = e.Value.ToString();
-        defaultCurrency = Currencies.GetAllCurrencies().FirstOrDefault(c => c.ToString() == selectedCurrency);
+        if (value == null)
+            return;
+
+        defaultCurrency = value;
         mapper = new FinancialRecordMapper(defaultCurrency, payer);
         if (bankRecords != null)
         {
@@ -182,6 +176,9 @@ else
             financialRecords = spreadsheetFinancialRecords;
         }
     }
+
+    private void OnBankSelectionChanged(Bank? value) => selectedBank = value;
+
     private void TogglePreviewMode()
     {
         isPreviewMode = !isPreviewMode;

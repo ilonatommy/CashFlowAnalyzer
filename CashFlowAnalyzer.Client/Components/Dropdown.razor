@@ -1,0 +1,77 @@
+@using System.ComponentModel
+@using CashFlowAnalyzer.Client.FinancialData
+@typeparam TItem
+
+<div class="mb-3">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label for="@Id" class="form-label">@Label</label>
+    }
+    <select id="@Id" @onchange="OnSelectedValueChanged" class="form-select @CssClass" disabled="@IsDisabled">
+        <option value="">-- @Placeholder --</option>
+        @foreach (var item in Items)
+        {
+            <option value="@item" selected="@(item?.Equals(SelectedValue) ?? false)">
+                @GetDisplayValue(item)
+            </option>
+        }
+    </select>
+</div>
+
+@code {
+    [Parameter] public string Id { get; set; }
+    [Parameter] public string Label { get; set; }
+    [Parameter] public string Placeholder { get; set; }
+    [Parameter] public IEnumerable<TItem> Items { get; set; }
+    [Parameter] public TItem? SelectedValue { get; set; }
+    [Parameter] public EventCallback<TItem?> SelectedValueChanged { get; set; }
+    [Parameter] public bool IsDisabled { get; set; }
+    [Parameter] public string CssClass { get; set; }
+
+    private async Task OnSelectedValueChanged(ChangeEventArgs e)
+    {
+        if (e.Value is string stringValue)
+        {
+            if (string.IsNullOrEmpty(stringValue))
+            {
+                SelectedValue = default;
+            }
+            else
+            {
+                var type = typeof(TItem);
+                var underlyingType = Nullable.GetUnderlyingType(type) ?? type;
+                if (underlyingType.IsEnum)
+                {
+                    SelectedValue = (TItem?)Enum.Parse(underlyingType, stringValue);
+                }
+                else if (underlyingType == typeof(ICurrency))
+                {
+                    SelectedValue = (TItem?)Currencies.GetAllCurrencies().FirstOrDefault(c => c.ToString() == stringValue);
+                }
+                else
+                {
+                    SelectedValue = (TItem?)Convert.ChangeType(stringValue, underlyingType);
+                }
+            }
+        }
+        await SelectedValueChanged.InvokeAsync(SelectedValue);
+    }
+
+    private string GetDisplayValue(TItem i)
+    {
+        if (i == null)
+        {
+            return string.Empty;
+        }
+
+        if (i.GetType().IsEnum)
+        {
+            var type = i.GetType();
+            var memInfo = type.GetMember(i.ToString());
+            var attributes = memInfo[0].GetCustomAttributes(typeof(DescriptionAttribute), false);
+            return attributes.Length > 0 ? ((DescriptionAttribute)attributes[0]).Description : i.ToString();
+        }
+
+        return i.ToString();
+    }
+}
