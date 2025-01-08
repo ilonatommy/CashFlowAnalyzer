@@ -1,0 +1,10 @@
+<div class="alert @CssClass" role="alert">
+    @Message
+    <button type="button" class="btn-close" aria-label="Close" @onclick="OnClose"></button>
+</div>
+
+@code {
+    [Parameter] public string Message { get; set; }
+    [Parameter] public string CssClass { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+}

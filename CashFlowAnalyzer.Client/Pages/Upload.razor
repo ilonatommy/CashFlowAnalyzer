@@ -94,17 +94,11 @@ else
 }
 @if (showSuccessMessage)
 {
-    <div class="alert alert-success" role="alert">
-        Records upload was successful.
-        <button type="button" class="btn-close" aria-label="Close" @onclick="CloseSuccessMessage"> </button>
-    </div>
+    <Alert Message="Records upload was successful." CssClass="alert-success" OnClose="@(() => { showSuccessMessage = false; })" />
 }
 @if (showErrorMessage)
 {
-    <div class="alert alert-danger" role="alert">
-        Records upload failed.
-        <button type="button" class="btn-close" aria-label="Close" @onclick="CloseErrorMessage"> </button>
-    </div>
+    <Alert Message="Records upload failed." CssClass="alert-danger" OnClose="@(() => { showErrorMessage = false; })" />
 }
 
 @code {
