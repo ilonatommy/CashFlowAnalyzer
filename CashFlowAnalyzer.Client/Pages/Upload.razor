@@ -28,69 +28,17 @@
 
 <InputFile OnChange="HandleFileSelected" key="@(fileInputKey)" class="form-control" disabled="@((selectedBank is null) && (defaultCurrency is null))" />
 
-@if (filteredFinancialRecords == null || filteredFinancialRecords.Count == 0)
+@if (financialRecords == null || financialRecords.Count == 0)
 {
     <p><em>Waiting for the file...</em></p>
 }
 else
 {
     <p>Please, review the categories</p>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Recipient Name</th>
-                <th>Value</th>
-                <th>Transaction Currency</th>
-                <th>Target Currency Value</th>
-                <th>Category</th>
-                <th>Sharing Mode</th>
-                <th>Save</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var record in filteredFinancialRecords)
-            {
-                <tr>
-                    <td>@record.ProcessingDate.ToShortDateString()</td>
-                    <td>@record.Recipient.Name</td>
-                    <td>@record.Value</td>
-                    <td>@record.TransactionCurrency</td>
-                    <td>@record.ConvertedValue.ToString("F2")</td>
-                    <td>
-                        <Dropdown TItem="CategoryType"
-                            Placeholder="Select a Category"
-                            CssClass="@(record.RequiresReview() ? "red-dropdown" : "")"
-                            Items="Enum.GetValues(typeof(CategoryType)).Cast<CategoryType>()"
-                            SelectedValue="record.Category.Type"
-                            SelectedValueChanged="EventCallback.Factory.Create<CategoryType>(this, value => OnCategorySelectionChanged(record, value))"
-                            IsDisabled="isPreviewMode" />
-                    </td>
-                    <td>
-                        <Dropdown TItem="SharingMode"
-                            Placeholder="Select a Sharing Mode"
-                            CssClass="@(record.Category.RequiresReview() ? "red-dropdown" : "")"
-                            Items="Enum.GetValues(typeof(SharingMode)).Cast<SharingMode>()"
-                            SelectedValue="record.Category.Mode"
-                            SelectedValueChanged="EventCallback.Factory.Create<SharingMode>(this, value => OnSharingModeSelectionChanged(record, value))"
-                            IsDisabled="isPreviewMode" />
-                    </td>
-                    <td>
-                        <input type="checkbox" checked="@(record.SuitableForSaving())" disabled />
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-    @if (isPreviewMode)
-    {
-        <button @onclick="TogglePreviewMode" class="btn btn-secondary">Edit</button>
-        <button @onclick="SaveData" class="btn btn-success">Save</button>
-    }
-    else
-    {
-        <button @onclick="TogglePreviewMode" class="btn btn-primary" disabled="@FinancialRecordsRequireReview()">Preview</button>
-    }
+    <FinancialRecordsTable
+        Records="financialRecords"
+        SaveData="SaveData"
+        IsPreviewMode="isPreviewMode" />
 }
 @if (showSuccessMessage)
 {
@@ -103,7 +51,6 @@ else
 
 @code {
     private bool isPreviewMode = false;
-    private bool isFileLoaded = false;
     private bool showSuccessMessage = false;
     private bool showErrorMessage = false;
     private string fileInputKey = Guid.NewGuid().ToString();
@@ -111,7 +58,6 @@ else
     private ICurrency defaultCurrency = Currencies.GetDefaultCurrency();
     private FinancialRecordMapper mapper;
     private List<FinancialRecord> financialRecords;
-    private List<FinancialRecord> filteredFinancialRecords;
 
     // TODo: spreadsheetRecords should be more abstract
     private List<CeskaSporitelnaRecord> spreadsheetRecords;
@@ -119,7 +65,6 @@ else
     protected override async Task OnInitializedAsync()
     {
         financialRecords = new List<FinancialRecord>();
-        filteredFinancialRecords = new List<FinancialRecord>();
     }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)
@@ -135,24 +80,8 @@ else
                 throw new NotImplementedException();
         }   
         financialRecords = mapper.Map(spreadsheetRecords);
-        filteredFinancialRecords = financialRecords;
     }
 
-    private void OnCategorySelectionChanged(FinancialRecord record, CategoryType selectedCategoryType)
-    {
-        var category = Categories.GetAllCategories().FirstOrDefault(c => c.Type == selectedCategoryType);
-        if (category != null)
-        {
-            record.Category = category;
-            StateHasChanged();
-        }
-    }
-
-    private void OnSharingModeSelectionChanged(FinancialRecord record, SharingMode selectedSharingMode)
-    {
-        record.Category.Mode = selectedSharingMode;
-        StateHasChanged();
-    }
 
     private void OnCurrencySelectionChanged(ICurrency? value)
     {
@@ -165,34 +94,16 @@ else
         {
             financialRecords = mapper.MapCurrency(financialRecords);
         }
-        if (filteredFinancialRecords != null)
-        {
-            filteredFinancialRecords = mapper.MapCurrency(filteredFinancialRecords);
-        }
+        StateHasChanged();
     }
 
     private void OnBankSelectionChanged(Bank? value) => selectedBank = value;
 
-    private void TogglePreviewMode()
-    {
-        isPreviewMode = !isPreviewMode;
-        if (isPreviewMode)
-        {
-            filteredFinancialRecords = filteredFinancialRecords.Where(record => record.SuitableForSaving()).ToList();
-        }
-        else
-        {
-            filteredFinancialRecords = financialRecords;
-        }
-    }
-
-    private bool FinancialRecordsRequireReview() => filteredFinancialRecords.Any(record => record.RequiresReview() || record.Category.RequiresReview());
-
-    private async Task SaveData()
+    private async Task SaveData(List<FinancialRecord> data)
     {
         try
         {
-            await FinancialDataService.SaveFinancialRecordsAsync(filteredFinancialRecords);
+            await FinancialDataService.SaveFinancialRecordsAsync(data);
             showSuccessMessage = true;
             CleanUploadView();
         }
@@ -218,12 +129,9 @@ else
         // issue: resetting InputFile field does not work neatly:
         // https://github.com/SteveSandersonMS/BlazorInputFile/issues/2
         fileInputKey = Guid.NewGuid().ToString();
-        filteredFinancialRecords = new List<FinancialRecord>();
         financialRecords = new List<FinancialRecord>();
         selectedBank = null;
         defaultCurrency = null;
-        isFileLoaded = false;
-        TogglePreviewMode();
         StateHasChanged();
     }
 }

@@ -1,0 +1,107 @@
+@using CashFlowAnalyzer.Client.FinancialData
+
+@namespace CashFlowAnalyzer.Client.Components
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Category</th>
+            <th>Sharing Mode</th>
+            <th>Amount</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var record in DisplayedRecords)
+        {
+            <tr>
+                <td>@record.ProcessingDate.ToShortDateString()</td>
+                <td>@record.Recipient.Name</td>
+                <td>@record.Value</td>
+                <td>@record.TransactionCurrency</td>
+                <td>@record.ConvertedValue.ToString("F2")</td>
+                <td>
+                    <Dropdown TItem="CategoryType"
+                        Placeholder="Select a Category"
+                        Items="Enum.GetValues(typeof(CategoryType)).Cast<CategoryType>()"
+                        SelectedValue="record.Category.Type"
+                        SelectedValueChanged="EventCallback.Factory.Create<CategoryType>(this, value => OnCategorySelectionChanged(record, value))"
+                        CssClass="@(record.RequiresReview() ? "red-dropdown" : "")"
+                        IsDisabled="IsPreviewMode" />
+                </td>
+                <td>
+                    <Dropdown TItem="SharingMode"
+                        Placeholder="Select a Sharing Mode"
+                        Items="Enum.GetValues(typeof(SharingMode)).Cast<SharingMode>()"
+                        SelectedValue="record.Category.Mode"
+                        SelectedValueChanged="EventCallback.Factory.Create<SharingMode>(this, value => OnSharingModeSelectionChanged(record, value))"
+                        CssClass="@(record.Category.RequiresReview() ? "red-dropdown" : "")"
+                        IsDisabled="IsPreviewMode" />
+                </td>
+                <td>
+                    <input type="checkbox" checked="@(record.SuitableForSaving())" disabled />
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+@if (IsPreviewMode)
+{
+    <button @onclick="TogglePreviewMode" class="btn btn-secondary">Edit</button>
+    <button @onclick="TriggerSaveData" class="btn btn-success">Save</button>
+}
+else
+{
+    <button @onclick="TogglePreviewMode" class="btn btn-primary" disabled="@FinancialRecordsRequireReview()">Preview</button>
+}
+
+@code {
+    [Parameter] public List<FinancialRecord> Records { get; set; }
+    [Parameter] public bool IsPreviewMode { get; set; }
+    [Parameter] public EventCallback<List<FinancialRecord>> SaveData { get; set; }
+    private List<FinancialRecord> DisplayedRecords { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        DisplayedRecords = Records;
+    }
+
+    private void OnCategorySelectionChanged(FinancialRecord record, CategoryType selectedCategoryType)
+    {
+        var category = Categories.GetAllCategories().FirstOrDefault(c => c.Type == selectedCategoryType);
+        if (category != null)
+        {
+            record.Category = category;
+            StateHasChanged();
+        }
+    }
+
+    private void OnSharingModeSelectionChanged(FinancialRecord record, SharingMode selectedSharingMode)
+    {
+        record.Category.Mode = selectedSharingMode;
+        StateHasChanged();
+    }
+
+    private void TogglePreviewMode()
+    {
+        IsPreviewMode = !IsPreviewMode;
+        if (IsPreviewMode)
+        {
+            DisplayedRecords = Records.Where(record => record.SuitableForSaving()).ToList();
+        }
+        else
+        {
+            DisplayedRecords = Records;
+        }
+    }
+
+    private bool FinancialRecordsRequireReview() =>
+        DisplayedRecords.Any(record => record.RequiresReview() || record.Category.RequiresReview());
+
+    private async Task TriggerSaveData()
+    {
+        await SaveData.InvokeAsync(DisplayedRecords);
+        DisplayedRecords = new List<FinancialRecord>();
+        TogglePreviewMode();
+    }
+}
