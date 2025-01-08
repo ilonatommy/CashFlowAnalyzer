@@ -15,7 +15,8 @@
           Placeholder="Select Default Currency"
           Items="Currencies.GetAllCurrencies()"
           SelectedValue="defaultCurrency"
-          SelectedValueChanged="OnCurrencySelectionChanged" />
+          SelectedValueChanged="OnCurrencySelectionChanged"
+          IsDisabled="isPreviewMode" />
 
 <Dropdown TItem="Bank?"
           Id="bankSelect"
@@ -38,7 +39,8 @@ else
     <FinancialRecordsTable
         Records="financialRecords"
         SaveData="SaveData"
-        IsPreviewMode="isPreviewMode" />
+        IsPreviewMode="isPreviewMode"
+        PreviewModeChanged="OnIsPreviewModeChanged" />
 }
 @if (showSuccessMessage)
 {
@@ -82,6 +84,11 @@ else
         financialRecords = mapper.Map(spreadsheetRecords);
     }
 
+    private void OnIsPreviewModeChanged(bool value)
+    {
+        isPreviewMode = value;
+        StateHasChanged();
+    }
 
     private void OnCurrencySelectionChanged(ICurrency? value)
     {

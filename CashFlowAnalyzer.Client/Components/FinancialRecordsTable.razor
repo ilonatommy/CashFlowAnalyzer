@@ -58,6 +58,7 @@ else
 @code {
     [Parameter] public List<FinancialRecord> Records { get; set; }
     [Parameter] public bool IsPreviewMode { get; set; }
+    [Parameter] public EventCallback<bool> PreviewModeChanged { get; set; }
     [Parameter] public EventCallback<List<FinancialRecord>> SaveData { get; set; }
     private List<FinancialRecord> DisplayedRecords { get; set; }
 
@@ -82,7 +83,7 @@ else
         StateHasChanged();
     }
 
-    private void TogglePreviewMode()
+    private async Task TogglePreviewMode()
     {
         IsPreviewMode = !IsPreviewMode;
         if (IsPreviewMode)
@@ -93,6 +94,7 @@ else
         {
             DisplayedRecords = Records;
         }
+        await PreviewModeChanged.InvokeAsync(IsPreviewMode);
     }
 
     private bool FinancialRecordsRequireReview() =>
@@ -102,6 +104,6 @@ else
     {
         await SaveData.InvokeAsync(DisplayedRecords);
         DisplayedRecords = new List<FinancialRecord>();
-        TogglePreviewMode();
+        await TogglePreviewMode();
     }
 }
