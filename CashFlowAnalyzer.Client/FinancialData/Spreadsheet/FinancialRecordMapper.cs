@@ -45,6 +45,27 @@ public class FinancialRecordMapper
         }
         return financialRecords;
     }
+    public List<FinancialRecord> MapCurrency(List<FinancialRecord> financialRecords)
+    {
+        List<FinancialRecord> mappedFinancialRecords = new();
+        foreach (var record in financialRecords)
+        {
+            var mappedRecord = new FinancialRecord()
+            {
+                ProcessingDate = record.ProcessingDate,
+                Recipient = record.Recipient,
+                Value = record.Value,
+                TransactionCurrency = record.TransactionCurrency,
+                ConvertedValue = GetConvertedValue(record.Value, record.TransactionCurrency),
+                Category = record.Category,
+                Bank = record.Bank,
+                Payer = record.Payer
+
+            };
+            mappedFinancialRecords.Add(mappedRecord);
+        }
+        return mappedFinancialRecords;
+    }
 
     private int StringToInt(string str)
     {

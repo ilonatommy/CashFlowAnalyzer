@@ -28,7 +28,7 @@
 
 <InputFile OnChange="HandleFileSelected" key="@(fileInputKey)" class="form-control" disabled="@((selectedBank is null) && (defaultCurrency is null))" />
 
-@if (financialRecords == null || financialRecords.Count == 0)
+@if (filteredFinancialRecords == null || filteredFinancialRecords.Count == 0)
 {
     <p><em>Waiting for the file...</em></p>
 }
@@ -49,7 +49,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var record in financialRecords)
+            @foreach (var record in filteredFinancialRecords)
             {
                 <tr>
                     <td>@record.ProcessingDate.ToShortDateString()</td>
@@ -76,7 +76,7 @@ else
                             IsDisabled="isPreviewMode" />
                     </td>
                     <td>
-                        <input type="checkbox" checked="@((ShouldBeSaved(record)))" disabled />
+                        <input type="checkbox" checked="@(record.SuitableForSaving())" disabled />
                     </td>
                 </tr>
             }
@@ -89,7 +89,7 @@ else
     }
     else
     {
-        <button @onclick="TogglePreviewMode" class="btn btn-primary" disabled="@HasRequiresReview()">Preview</button>
+        <button @onclick="TogglePreviewMode" class="btn btn-primary" disabled="@FinancialRecordsRequireReview()">Preview</button>
     }
 }
 @if (showSuccessMessage)
@@ -116,16 +116,16 @@ else
     private string payer = "me"; // ToDo: ThisShouldBeManualInputFromEditableDropdown
     private ICurrency defaultCurrency = Currencies.GetDefaultCurrency();
     private FinancialRecordMapper mapper;
-    private List<FinancialRecord> spreadsheetFinancialRecords;
     private List<FinancialRecord> financialRecords;
+    private List<FinancialRecord> filteredFinancialRecords;
 
-    // TODo: bankRecords should be more abstract
-    private List<CeskaSporitelnaRecord> bankRecords;
+    // TODo: spreadsheetRecords should be more abstract
+    private List<CeskaSporitelnaRecord> spreadsheetRecords;
     private Bank? selectedBank;
     protected override async Task OnInitializedAsync()
     {
-        spreadsheetFinancialRecords = new List<FinancialRecord>();
         financialRecords = new List<FinancialRecord>();
+        filteredFinancialRecords = new List<FinancialRecord>();
     }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)
@@ -135,13 +135,13 @@ else
         switch (selectedBank)
         {
             case Bank.CeskaSporitelna:
-                bankRecords = await SpreadsheetReader.ReadCeskaSporitelnaSpreadsheetAsync(stream);
+                spreadsheetRecords = await SpreadsheetReader.ReadCeskaSporitelnaSpreadsheetAsync(stream);
                 break;
             default:
                 throw new NotImplementedException();
         }   
-        spreadsheetFinancialRecords = mapper.Map(bankRecords);
-        financialRecords = spreadsheetFinancialRecords;
+        financialRecords = mapper.Map(spreadsheetRecords);
+        filteredFinancialRecords = financialRecords;
     }
 
     private void OnCategorySelectionChanged(FinancialRecord record, CategoryType selectedCategoryType)
@@ -160,9 +160,6 @@ else
         StateHasChanged();
     }
 
-    private bool ShouldBeSaved(FinancialRecord record) =>
-        (record.Category.Mode != SharingMode.Ignored && record.Value != 0);
-
     private void OnCurrencySelectionChanged(ICurrency? value)
     {
         if (value == null)
@@ -170,10 +167,13 @@ else
 
         defaultCurrency = value;
         mapper = new FinancialRecordMapper(defaultCurrency, payer);
-        if (bankRecords != null)
+        if (financialRecords != null)
         {
-            spreadsheetFinancialRecords = mapper.Map(bankRecords);
-            financialRecords = spreadsheetFinancialRecords;
+            financialRecords = mapper.MapCurrency(financialRecords);
+        }
+        if (filteredFinancialRecords != null)
+        {
+            filteredFinancialRecords = mapper.MapCurrency(filteredFinancialRecords);
         }
     }
 
@@ -184,26 +184,21 @@ else
         isPreviewMode = !isPreviewMode;
         if (isPreviewMode)
         {
-            financialRecords = GetFilteredRecords().ToList();
+            filteredFinancialRecords = filteredFinancialRecords.Where(record => record.SuitableForSaving()).ToList();
         }
         else
         {
-            financialRecords = spreadsheetFinancialRecords;
+            filteredFinancialRecords = financialRecords;
         }
     }
-    
-    private IEnumerable<FinancialRecord> GetFilteredRecords()
-    {
-        return financialRecords.Where(record => ShouldBeSaved(record));
-    }
 
-    private bool HasRequiresReview() => financialRecords.Any(record => record.RequiresReview() || record.Category.RequiresReview());
+    private bool FinancialRecordsRequireReview() => filteredFinancialRecords.Any(record => record.RequiresReview() || record.Category.RequiresReview());
 
     private async Task SaveData()
     {
         try
         {
-            await FinancialDataService.SaveFinancialRecordsAsync(financialRecords);
+            await FinancialDataService.SaveFinancialRecordsAsync(filteredFinancialRecords);
             showSuccessMessage = true;
             CleanUploadView();
         }
@@ -229,8 +224,8 @@ else
         // issue: resetting InputFile field does not work neatly:
         // https://github.com/SteveSandersonMS/BlazorInputFile/issues/2
         fileInputKey = Guid.NewGuid().ToString();
+        filteredFinancialRecords = new List<FinancialRecord>();
         financialRecords = new List<FinancialRecord>();
-        spreadsheetFinancialRecords = new List<FinancialRecord>();
         selectedBank = null;
         defaultCurrency = null;
         isFileLoaded = false;

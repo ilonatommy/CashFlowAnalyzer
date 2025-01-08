@@ -12,4 +12,5 @@ public sealed class FinancialRecord
     public string Payer { get; set; } = string.Empty;
 
     public bool RequiresReview() => Category.Type == CategoryType.RequiresReview;
+    public bool SuitableForSaving() => Category.Mode != SharingMode.Ignored && Value != 0;
 }
