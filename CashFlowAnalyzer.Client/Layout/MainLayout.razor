@@ -2,9 +2,9 @@
 @* Issue: Cannot provide a value for property 'AccountService' on type 
 'CashFlowAnalyzer.Client.Layout.MainLayout'. There is no registered
 service of type 'CashFlowAnalyzer.Client.Services.AccountService'. *@
-@* @inject NavigationManager Navigation
-@inject AccountService AccountService
-@inject AuthenticationStateProvider AuthenticationStateProvider *@
+@inject NavigationManager Navigation
+@inject IAccountService AccountService
+@inject AuthenticationInfoProvider AuthenticationInfoProvider
 
 <div class="page">
     <div class="sidebar">
@@ -13,10 +13,10 @@ service of type 'CashFlowAnalyzer.Client.Services.AccountService'. *@
 
     <main>
         <div class="top-row px-4">
-            @* @if (isAuthenticated)
+            @if (isAuthenticated)
             {
                 <button class="btn btn-danger" @onclick="Logout">Logout</button>
-            } *@
+            }
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 
@@ -32,13 +32,20 @@ service of type 'CashFlowAnalyzer.Client.Services.AccountService'. *@
     <span class="dismiss">🗙</span>
 </div>
 
-@* @code {
+@code {
     private bool isAuthenticated;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        isAuthenticated = authState.User.Identity.IsAuthenticated;
+        if (firstRender)
+        {
+            isAuthenticated = await AuthenticationInfoProvider.IsAuthenticated();
+            if (isAuthenticated)
+            {
+                StateHasChanged();
+            }
+        }
+        await base.OnAfterRenderAsync(firstRender);
     }
 
     private async Task Logout()
@@ -46,4 +53,4 @@ service of type 'CashFlowAnalyzer.Client.Services.AccountService'. *@
         await AccountService.Logout();
         Navigation.NavigateTo("/Login");
     }
-} *@
+}

@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<SpreadsheetReader>();
 builder.Services.AddScoped<IFinancialDataService, FinancialDataService>();
+builder.Services.AddScoped<AuthenticationInfoProvider>();
 builder.Services.AddScoped<DatabaseService>();
 
 // Add services to the container.
