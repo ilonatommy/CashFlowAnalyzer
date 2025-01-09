@@ -9,7 +9,7 @@
 
     <main>
         <div class="top-row px-4">
-            @if (isAuthenticated)
+            @if (IsAuthenticated)
             {
                 <button class="btn btn-danger" @onclick="Logout">Logout</button>
             }
@@ -29,18 +29,16 @@
 </div>
 
 @code {
-    private bool isAuthenticated;
+    private bool IsAuthenticated;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // issue: this does not get triggered if we redirected from login page or it's the server rendering
-        if (firstRender)
+        // issue: this does not get triggered if it's server rendering
+        var isAuthenticated = await AccountService.IsAuthenticated();
+        if (isAuthenticated != IsAuthenticated)
         {
-            isAuthenticated = await AccountService.IsAuthenticated();
-            if (isAuthenticated)
-            {
-                StateHasChanged();
-            }
+            IsAuthenticated = isAuthenticated;
+            StateHasChanged();
         }
         await base.OnAfterRenderAsync(firstRender);
     }
@@ -48,7 +46,7 @@
     private async Task Logout()
     {
         await AccountService.Logout();
-        isAuthenticated = false;
+        IsAuthenticated = false;
         Navigation.NavigateTo("/Login");
     }
 }
