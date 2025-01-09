@@ -46,13 +46,14 @@ else
 }
 @if (showErrorMessage)
 {
-    <AlertPopup Message="Records upload failed." CssClass="alert-danger" OnClose="@(() => { showErrorMessage = false; })" />
+    <AlertPopup Message="@errorMessage" CssClass="alert-danger" OnClose="@(() => { showErrorMessage = false; })" />
 }
 
 @code {
     private bool isPreviewMode = false;
     private bool showSuccessMessage = false;
     private bool showErrorMessage = false;
+    private string errorMessage = string.Empty;
     private string fileInputKey = Guid.NewGuid().ToString();
     private string payer = "me"; // ToDo: ThisShouldBeManualInputFromEditableDropdown
     private ICurrency defaultCurrency = Currencies.GetDefaultCurrency();
@@ -114,6 +115,7 @@ else
         }
         catch (Exception ex)
         {
+            errorMessage = $"Records upload failed. {ex.Message}";
             Console.WriteLine($"Error saving data: {ex.Message}");
             showErrorMessage = true;
         }
