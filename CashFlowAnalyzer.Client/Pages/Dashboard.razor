@@ -1,0 +1,95 @@
+﻿@page "/dashboard"
+@attribute [Authorize]
+@using System
+@inject IFinancialDataService FinancialDataService
+
+<PageTitle>Dashboard</PageTitle>
+
+<h1>Dashboard</h1>
+
+<p>Investigate your spending</p>
+
+@if (financialRecords == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <PieChart @ref="pieChart" Width="500" Class="mb-5"/>
+}
+
+@code {
+    private IEnumerable<FinancialRecord> financialRecords;
+    private PieChart pieChart = default!;
+    private PieChartOptions pieChartOptions = default!;
+    private ChartData chartData = default!;
+    // workaround for "ColorBuilder.CategoricalTwelveColors not found"
+    private string[]? backgroundColors = new[] {
+        "#0fb5ae", "#4046ca", "#f68511", "#de3d82", "#7e84fa", "#72e06a", "#147af3", "#7326d3", "#e8c600", "#cb5d00", "#008f5d", "#bce931" };
+
+    private int dataLabelsCount = 0;
+    private int datasetsCount = 0;
+    private bool isDataLoaded = false;
+    private Random random = new();
+    protected override async Task OnInitializedAsync()
+    {
+        financialRecords = await FinancialDataService.GetFinancialRecordsAsync();
+        chartData = new ChartData { Labels = GetCategoryLabels(), Datasets = GetDataSet(financialRecords) };
+
+        pieChartOptions = new();
+        pieChartOptions.Responsive = true;
+        pieChartOptions.Plugins.Title!.Text = "Dates date1 date2";
+        pieChartOptions.Plugins.Title.Display = true;
+        isDataLoaded = true;
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (isDataLoaded)
+        {
+            isDataLoaded = false;
+            await pieChart.InitializeAsync(chartData, pieChartOptions);
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private List<IChartDataset> GetDataSet(IEnumerable<FinancialRecord> records)
+    {
+        List<double?> valuesByCategory = new();
+        foreach (var c in Categories.GetNotIgnoredCategories())
+        {
+            valuesByCategory.Add((double?)Convert.ToDouble(records.Where(r => r.Category == c).Select(r => r.Value).Sum()));
+        }
+        return new List<IChartDataset>() {
+                new PieChartDataset() {
+                    Label = $"Spending",
+                    Data = valuesByCategory,
+                    BackgroundColor = GetBackgroundColors()
+                    }
+                };
+    }
+
+    private List<string> GetBackgroundColors()
+    {
+        var colors = new List<string>();
+        for (var index = 0; index < dataLabelsCount; index++)
+        {
+            colors.Add(backgroundColors![index]);
+        }
+
+        return colors;
+    }
+
+    private List<string> GetCategoryLabels()
+    {
+        var labels = new List<string>();
+        foreach (var c in Categories.GetNotIgnoredCategories())
+        {
+            labels.Add(c.ToString());
+        }
+        dataLabelsCount = labels.Count;
+
+        return labels;
+    }
+}

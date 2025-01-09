@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using CashFlowAnalyzer.Client.FinancialData;
 using CashFlowAnalyzer.Shared.Models;
 
@@ -31,5 +32,31 @@ public class FinancialDataService : IFinancialDataService
         }
         var response = await _httpClient.PostAsJsonAsync($"{baseAddress}/api/financialrecords", recordDtos);
         response.EnsureSuccessStatusCode();
+    }
+
+    // ToDo: add filtering by dates/categories etc
+    public async Task<IEnumerable<FinancialRecord>> GetFinancialRecordsAsync()
+    {
+        var response = await _httpClient.GetAsync($"{baseAddress}/api/financialrecords");
+        response.EnsureSuccessStatusCode();
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var recordDtos = JsonSerializer.Deserialize<List<FinancialRecordDto>>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        List<FinancialRecord> records = new();
+        foreach(var dto in recordDtos)
+        {
+            records.Add(new FinancialRecord()
+            {
+                ProcessingDate = dto.ProcessingDate,
+                Value = dto.Value,
+                TransactionCurrency = Currencies.GetCurrencyByName(dto.TransactionCurrency),
+                Category = Categories.GetCategoryByName(dto.Category),
+                Bank = dto.Bank.FromDescription(),
+                Payer = dto.Payer
+            });
+        }
+
+        return records;
     }
 }

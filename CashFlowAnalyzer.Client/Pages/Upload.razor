@@ -1,6 +1,4 @@
 ﻿@page "/upload"
-@using CashFlowAnalyzer.Client.FinancialData
-@using CashFlowAnalyzer.Client.Components
 @attribute [Authorize]
 @inject SpreadsheetReader SpreadsheetReader
 @inject IFinancialDataService FinancialDataService
@@ -9,7 +7,7 @@
 
 <h1>Upload</h1>
 
-<Dropdown TItem="ICurrency"
+<DropdownSelector TItem="ICurrency"
           Id="currencySelect"
           Label="Select Currency"
           Placeholder="Select Default Currency"
@@ -18,7 +16,7 @@
           SelectedValueChanged="OnCurrencySelectionChanged"
           IsDisabled="isPreviewMode" />
 
-<Dropdown TItem="Bank?"
+<DropdownSelector TItem="Bank?"
           Id="bankSelect"
           Label="Select Bank"
           Placeholder="Select Bank"
@@ -44,11 +42,11 @@ else
 }
 @if (showSuccessMessage)
 {
-    <Alert Message="Records upload was successful." CssClass="alert-success" OnClose="@(() => { showSuccessMessage = false; })" />
+    <AlertPopup Message="Records upload was successful." CssClass="alert-success" OnClose="@(() => { showSuccessMessage = false; })" />
 }
 @if (showErrorMessage)
 {
-    <Alert Message="Records upload failed." CssClass="alert-danger" OnClose="@(() => { showErrorMessage = false; })" />
+    <AlertPopup Message="Records upload failed." CssClass="alert-danger" OnClose="@(() => { showErrorMessage = false; })" />
 }
 
 @code {

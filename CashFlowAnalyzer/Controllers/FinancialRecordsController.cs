@@ -1,7 +1,6 @@
 using CashFlowAnalyzer.Shared.Models;
 using CashFlowAnalyzer.Server.Services;
 using Microsoft.AspNetCore.Mvc;
-using CashFlowAnalyzer.Client.FinancialData;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -24,5 +23,12 @@ public class FinancialRecordsController : ControllerBase
 
         await _dbService.SaveFinancialRecordsAsync(records);
         return Ok();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetFinancialRecords()
+    {
+        var records = await _dbService.GetFinancialRecordsAsync();
+        return Ok(records);
     }
 }

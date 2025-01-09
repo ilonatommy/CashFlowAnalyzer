@@ -21,7 +21,7 @@
                 <td>@record.TransactionCurrency</td>
                 <td>@record.ConvertedValue.ToString("F2")</td>
                 <td>
-                    <Dropdown TItem="CategoryType"
+                    <DropdownSelector TItem="CategoryType"
                         Placeholder="Select a Category"
                         Items="Enum.GetValues(typeof(CategoryType)).Cast<CategoryType>()"
                         SelectedValue="record.Category.Type"
@@ -30,7 +30,7 @@
                         IsDisabled="IsPreviewMode" />
                 </td>
                 <td>
-                    <Dropdown TItem="SharingMode"
+                    <DropdownSelector TItem="SharingMode"
                         Placeholder="Select a Sharing Mode"
                         Items="Enum.GetValues(typeof(SharingMode)).Cast<SharingMode>()"
                         SelectedValue="record.Category.Mode"
