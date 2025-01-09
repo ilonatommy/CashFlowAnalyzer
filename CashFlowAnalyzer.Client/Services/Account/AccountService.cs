@@ -40,15 +40,25 @@ public class AccountService : IAccountService
         return await SendRequest(request);
     }
 
+    public async Task<bool> IsAuthenticated()
+    {
+        var response = await _http.GetAsync($"{baseAddress}/api/auth/isAuthenticated");
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadFromJsonAsync<bool>();
+        }
+        return false;
+    }
+
     private async Task<AccountServiceResult> SendRequest(HttpRequestMessage request)
     {
         using var response = await _http.SendAsync(request);
         if (response.StatusCode == HttpStatusCode.OK)
         {
-            _log.LogInformation("Registration was successful");
+            _log.LogInformation("Request was successful");
             return new AccountServiceResult() { Success = true };
         }
-        _log.LogWarning("Registration failed");
+        _log.LogWarning("Request failed");
         var errors = await response.Content.ReadFromJsonAsync<List<string>>();
         return new AccountServiceResult() { Success = false, Errors = errors };
     }

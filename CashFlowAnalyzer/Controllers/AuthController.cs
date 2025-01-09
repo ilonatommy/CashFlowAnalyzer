@@ -17,6 +17,12 @@ namespace CashFlowAnalyzer.Server.Controllers
             _userManager = userManager;
         }
 
+        [HttpGet("isAuthenticated")]
+        public IActionResult IsAuthenticated()
+        {
+            return Ok(User.Identity.IsAuthenticated);
+        }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {

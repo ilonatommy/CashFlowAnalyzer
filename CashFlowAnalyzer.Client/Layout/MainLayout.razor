@@ -1,10 +1,6 @@
 ﻿@inherits LayoutComponentBase
-@* Issue: Cannot provide a value for property 'AccountService' on type 
-'CashFlowAnalyzer.Client.Layout.MainLayout'. There is no registered
-service of type 'CashFlowAnalyzer.Client.Services.AccountService'. *@
 @inject NavigationManager Navigation
 @inject IAccountService AccountService
-@inject AuthenticationInfoProvider AuthenticationInfoProvider
 
 <div class="page">
     <div class="sidebar">
@@ -37,9 +33,10 @@ service of type 'CashFlowAnalyzer.Client.Services.AccountService'. *@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // issue: this does not get triggered if we redirected from login page or it's the server rendering
         if (firstRender)
         {
-            isAuthenticated = await AuthenticationInfoProvider.IsAuthenticated();
+            isAuthenticated = await AccountService.IsAuthenticated();
             if (isAuthenticated)
             {
                 StateHasChanged();
@@ -51,6 +48,7 @@ service of type 'CashFlowAnalyzer.Client.Services.AccountService'. *@
     private async Task Logout()
     {
         await AccountService.Logout();
+        isAuthenticated = false;
         Navigation.NavigateTo("/Login");
     }
 }

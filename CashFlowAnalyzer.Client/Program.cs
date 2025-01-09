@@ -15,7 +15,6 @@ builder.Services.AddHttpClient<IFinancialDataService, FinancialDataService>(http
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<SpreadsheetReader>();
 builder.Services.AddScoped<IFinancialDataService, FinancialDataService>();
-builder.Services.AddScoped<AuthenticationInfoProvider>();
 builder.Services.AddBlazorBootstrap();
 
 // Supply HttpClient instances that include access tokens when making requests to the server project
