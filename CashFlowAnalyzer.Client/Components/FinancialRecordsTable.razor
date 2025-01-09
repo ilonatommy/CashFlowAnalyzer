@@ -64,7 +64,8 @@ else
 
     protected override void OnParametersSet()
     {
-        DisplayedRecords = Records;
+        if (DisplayedRecords == null)
+            DisplayedRecords = Records;
     }
 
     private void OnCategorySelectionChanged(FinancialRecord record, CategoryType selectedCategoryType)
