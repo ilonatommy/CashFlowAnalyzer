@@ -57,11 +57,8 @@ else
     private string fileInputKey = Guid.NewGuid().ToString();
     private string payer = "me"; // ToDo: ThisShouldBeManualInputFromEditableDropdown
     private ICurrency defaultCurrency = Currencies.GetDefaultCurrency();
-    private FinancialRecordMapper mapper;
+    private CurrencyMapper currencyMapper;
     private List<FinancialRecord> financialRecords;
-
-    // TODo: spreadsheetRecords should be more abstract
-    private List<CeskaSporitelnaRecord> spreadsheetRecords;
     private Bank? selectedBank;
     protected override async Task OnInitializedAsync()
     {
@@ -72,15 +69,30 @@ else
     {
         var file = e.File;
         using var stream = file.OpenReadStream();
-        switch (selectedBank)
+        try
         {
-            case Bank.CeskaSporitelna:
-                spreadsheetRecords = await SpreadsheetReader.ReadCeskaSporitelnaSpreadsheetAsync(stream);
-                break;
-            default:
-                throw new NotImplementedException();
-        }   
-        financialRecords = mapper.Map(spreadsheetRecords);
+            switch (selectedBank)
+            {
+                case Bank.CeskaSporitelna:
+                    var ceskaRecords = await SpreadsheetReader.ReadCeskaSporitelnaSpreadsheetAsync(stream);
+                    CeskaSporitelnaMapper csMapper = new(currencyMapper, payer);
+                    financialRecords = csMapper.Map(ceskaRecords);
+                    break;
+                case Bank.Raiffeisen:
+                    var raiffeisenRecords = await SpreadsheetReader.ReadRaiffeisenSpreadsheetAsync(stream);
+                    RaiffeisenMapper rMapper = new(currencyMapper, payer);
+                    financialRecords = rMapper.Map(raiffeisenRecords);
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"File processing failed. {ex.Message}";
+            Console.WriteLine($"Error processing file: {ex.Message}");
+            showErrorMessage = true;
+        }
     }
 
     private void OnIsPreviewModeChanged(bool value)
@@ -95,10 +107,10 @@ else
             return;
 
         defaultCurrency = value;
-        mapper = new FinancialRecordMapper(defaultCurrency, payer);
+        currencyMapper = new CurrencyMapper(defaultCurrency);
         if (financialRecords != null)
         {
-            financialRecords = mapper.MapCurrency(financialRecords);
+            financialRecords = currencyMapper.MapCurrency(financialRecords);
         }
         StateHasChanged();
     }

@@ -1,9 +1,9 @@
 using CashFlowAnalyzer.Client.FinancialData;
 
-public class CeskaSporitelnaCategoryMapper : ICategoryMapper
+public class CeskaSporitelnaCategoryMapper
 {
     // ToDo: save the map in db and mechanism to add own CategoryType
-    private readonly Dictionary<string, CategoryType> map = new()
+    private static readonly Dictionary<string, CategoryType> map = new()
     {
         { "Fees", CategoryType.Fees },
         { "Phone bills", CategoryType.PhoneBills },
@@ -17,7 +17,7 @@ public class CeskaSporitelnaCategoryMapper : ICategoryMapper
         { "Online Shops", CategoryType.RequiresReview }
     };
 
-    public Category Map(string category)
+    public static Category Map(string category)
     {
         CategoryType categoryType;
         if (!map.TryGetValue(category, out categoryType))

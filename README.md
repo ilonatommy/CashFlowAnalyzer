@@ -19,3 +19,13 @@ Choose .xlsx for the dates that you're interested in (custom - rozmezí), select
 - partner (protiúčet)
 - currency (měna)
 - category (kategorie)
+
+### Raiffeisen Bank
+
+In the home page of the browser version of your internet banking, click `Transactions` button on the account you would like to export operations from.
+In the filter select:
+
+- outgoing (odchozí)
+- dates you're interested in (datum)
+
+Apply the filters (hledat) and click .csv button to export the transactions.
