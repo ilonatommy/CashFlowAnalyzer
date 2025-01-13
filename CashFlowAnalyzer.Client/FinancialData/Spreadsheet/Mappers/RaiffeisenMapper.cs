@@ -32,7 +32,7 @@ public class RaiffeisenMapper : FinancialRecordMapper
 
         return new FinancialRecord()
         {
-            ProcessingDate = spreadsheetRecord.TransactionDate,
+            ProcessingDate = spreadsheetRecord.ProcessingDate,
             Recipient = new Recipient(partnerName, partnerAccountNumber),
             Value = outgoingAmount,
             TransactionCurrency = transactionCurrency,

@@ -28,4 +28,4 @@ In the filter select:
 - outgoing (odchozí)
 - dates you're interested in (datum)
 
-Apply the filters (hledat) and click .csv button to export the transactions.
+Apply the filters (hledat) and click .csv button to export the transactions. The document contains transfer notes that can contain column separators and unintentionally break cvs loading mechanism. To make sure the file is loaded correctly, convert it to `.xlsx` format ("Excel Worksheet"), e.g. using MS Excel `Save As` option.

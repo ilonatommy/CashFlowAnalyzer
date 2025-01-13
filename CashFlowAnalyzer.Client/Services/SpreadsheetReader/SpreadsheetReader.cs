@@ -6,19 +6,21 @@ namespace CashFlowAnalyzer.Client.Services;
 
 public class SpreadsheetReader
 {
+    private string[] CeskaSporitelnaDateFormats = ["dd.MM.yyyy"];
     private string[] CeskaSporitelnaColumns = [
         "Processing Date",
         "Partner Name",
         "Partner IBAN",
         "BIC/SWIFT",
         "Partner Account Number",
-        "Bank Code",
+        "Bank code",
         "Incoming Amount",
         "Outgoing Amount",
         "Currency",
         "Category"
     ];
 
+    private string[] RaiffeisenDateFormats = ["MM.dd.yy H:mm"];
     private string[] RaiffeisenColumns = [
         "Transaction Date", // ignored
         "Booking Date",
@@ -52,6 +54,7 @@ public class SpreadsheetReader
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
     }
 
+    // ToDo: we could support csv if the user removed unintentional column separators - on their responsibility
     private static async Task<(List<string[]>, List<string>)> LoadCsvAsync(Stream stream)
     {
         var rows = new List<string[]>();
@@ -81,159 +84,178 @@ public class SpreadsheetReader
         return (rows, columnTitles);
     }
 
-    private static async Task<(ExcelWorksheet, List<string>)> LoadWorksheetAsync(Stream stream)
+    private static async Task<(ExcelPackage, ExcelWorksheet, List<string>)> LoadWorksheetAsync(Stream stream, int columnTitlesOffset)
     {
         using (var memoryStream = new MemoryStream())
         {
             await stream.CopyToAsync(memoryStream);
             memoryStream.Position = 0;
+            var package = new ExcelPackage(memoryStream);
 
-            using (var package = new ExcelPackage(memoryStream))
+            var worksheet = package.Workbook.Worksheets[0]; // Assuming the data is in the first worksheet
+
+            // Read the column titles from the 3rd row
+            var columnTitles = new List<string>();
+            for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
             {
-                var worksheet = package.Workbook.Worksheets[0]; // Assuming the data is in the first worksheet
-
-                // Read the column titles from the 3rd row
-                var columnTitles = new List<string>();
-                for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
-                {
-                    columnTitles.Add(worksheet.Cells[3, col].Text);
-                }
-
-                return (worksheet, columnTitles);
+                columnTitles.Add(worksheet.Cells[columnTitlesOffset, col].Text);
             }
+
+            return (package, worksheet, columnTitles);
         }
     }
 
     public async Task<List<CeskaSporitelnaRecord>> ReadCeskaSporitelnaSpreadsheetAsync(Stream stream)
     {
         var result = new List<CeskaSporitelnaRecord>();
-        var (worksheet, columnTitles) = await LoadWorksheetAsync(stream);
+        var (package, worksheet, columnTitles) = await LoadWorksheetAsync(stream, 3);
         if (!VerifySpreadsheetColumns(columnTitles, CeskaSporitelnaColumns)!)
         {
             throw new Exception($"{incorrectFormatError} {Bank.CeskaSporitelna.ToFriendlyString()}.");
         }
-        for (int row = 4; row <= worksheet.Dimension.End.Row; row++)
+        try
         {
-            var record = new CeskaSporitelnaRecord();
-            for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
+            for (int row = 4; row <= worksheet.Dimension.End.Row; row++)
             {
-                var cellValue = worksheet.Cells[row, col].Text;
-                var columnTitle = columnTitles[col - 1];
-                if (columnTitle == CeskaSporitelnaColumns[0])
+                var record = new CeskaSporitelnaRecord();
+                for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
                 {
-                    if (string.IsNullOrEmpty(cellValue))
+                    var cellValue = worksheet.Cells[row, col].Text;
+                    var columnTitle = columnTitles[col - 1];
+                    if (columnTitle == CeskaSporitelnaColumns[0])
                     {
-                        row = worksheet.Dimension.End.Row;
-                        break;
+                        if (string.IsNullOrEmpty(cellValue))
+                        {
+                            row = worksheet.Dimension.End.Row;
+                            break;
+                        }
+                        record.ProcessingDate = CeskaSporitelnaParseDate(cellValue);
                     }
-                    record.ProcessingDate = ParseDate(cellValue);
+                    else if (columnTitle == CeskaSporitelnaColumns[1])
+                    {
+                        record.PartnerName = cellValue;
+                    }
+                    else if (columnTitle == CeskaSporitelnaColumns[2])
+                    {
+                        record.PartnerIBAN = cellValue;
+                    }
+                    else if (columnTitle == CeskaSporitelnaColumns[3])
+                    {
+                        record.BICSWIFT = cellValue;
+                    }
+                    else if (columnTitle == CeskaSporitelnaColumns[4])
+                    {
+                        record.PartnerAccountNumber = cellValue;
+                    }
+                    else if (columnTitle == CeskaSporitelnaColumns[5])
+                    {
+                        record.BankCode = cellValue;
+                    }
+                    else if (columnTitle == CeskaSporitelnaColumns[6])
+                    {
+                        record.IncomingAmount = cellValue;
+                    }
+                    else if (columnTitle == CeskaSporitelnaColumns[7])
+                    {
+                        record.OutgoingAmount = cellValue;
+                    }
+                    else if (columnTitle == CeskaSporitelnaColumns[8])
+                    {
+                        record.Currency = cellValue;
+                    }
+                    else if (columnTitle == CeskaSporitelnaColumns[9])
+                    {
+                        record.Category = cellValue;
+                    }
                 }
-                else if (columnTitle == CeskaSporitelnaColumns[1])
-                {
-                    record.PartnerName = cellValue;
-                }
-                else if (columnTitle == CeskaSporitelnaColumns[2])
-                {
-                    record.PartnerIBAN = cellValue;
-                }
-                else if (columnTitle == CeskaSporitelnaColumns[3])
-                {
-                    record.BICSWIFT = cellValue;
-                }
-                else if (columnTitle == CeskaSporitelnaColumns[4])
-                {
-                    record.PartnerAccountNumber = cellValue;
-                }
-                else if (columnTitle == CeskaSporitelnaColumns[5])
-                {
-                    record.BankCode = cellValue;
-                }
-                else if (columnTitle == CeskaSporitelnaColumns[6])
-                {
-                    record.IncomingAmount = cellValue;
-                }
-                else if (columnTitle == CeskaSporitelnaColumns[7])
-                {
-                    record.OutgoingAmount = cellValue;
-                }
-                else if (columnTitle == CeskaSporitelnaColumns[8])
-                {
-                    record.Currency = cellValue;
-                }
-                else if (columnTitle == CeskaSporitelnaColumns[9])
-                {
-                    record.Category = cellValue;
-                }
+                result.Add(record);
             }
-            result.Add(record);
         }
+        finally
+        {
+            package.Dispose();
+        }
+        
         return result;
     }
 
     public async Task<List<RaiffeisenRecord>> ReadRaiffeisenSpreadsheetAsync(Stream stream)
     {
         var result = new List<RaiffeisenRecord>();
-        var (rows, columnTitles) = await LoadCsvAsync(stream);
+        var (package, worksheet, columnTitles) = await LoadWorksheetAsync(stream, 1);
         if (!VerifySpreadsheetColumns(columnTitles, RaiffeisenColumns)!)
         {
             throw new Exception($"{incorrectFormatError} {Bank.Raiffeisen.ToFriendlyString()}.");
         }
-        foreach (var row in rows)
+        
+        try
         {
-            var record = new RaiffeisenRecord();
-            for (int col = 0; col < row.Length; col++)
+            for (int row = 2; row <= worksheet.Dimension.End.Row; row++)
             {
-                var cellValue = row[col].Trim('"');
-                var columnTitle = columnTitles[col];
-                if (columnTitle == RaiffeisenColumns[1])
+                var record = new RaiffeisenRecord();
+                for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
                 {
-                    record.ProcessingDate = ParseDate(cellValue);
-                }
-                else if (columnTitle == RaiffeisenColumns[5])
-                {
-                    record.PartnerAccountNumber = cellValue;
-                }
-                else if (columnTitle == RaiffeisenColumns[6])
-                {
-                    record.PartnerName = cellValue;
-                }
-                else if (columnTitle == RaiffeisenColumns[7])
-                {
-                    record.TransactionType = cellValue;
-                }
-                else if (columnTitle == RaiffeisenColumns[8])
-                {
-                    record.Message = cellValue;
-                }
-                else if (columnTitle == RaiffeisenColumns[9])
-                {
-                    record.Note = cellValue;
-                }
-                else if (columnTitle == RaiffeisenColumns[10])
-                {
-                    record.Note = cellValue;
-                }
-                else if (columnTitle == RaiffeisenColumns[14])
-                {
-                    if (cellValue.StartsWith('-'))
+                    var cellValue = worksheet.Cells[row, col].Text;
+                    var columnTitle = columnTitles[col - 1];
+                    if (columnTitle == RaiffeisenColumns[1])
                     {
-                        record.OutgoingAmount = cellValue;
+                        if (string.IsNullOrEmpty(cellValue))
+                        {
+                            row = worksheet.Dimension.End.Row;
+                            break;
+                        }
+                        record.ProcessingDate = RaiffeisenParseDate(cellValue);
                     }
-                    else
+                    else if (columnTitle == RaiffeisenColumns[5])
                     {
-                        record.IncomingAmount = cellValue;
+                        record.PartnerAccountNumber = cellValue;
+                    }
+                    else if (columnTitle == RaiffeisenColumns[6])
+                    {
+                        record.PartnerName = cellValue;
+                    }
+                    else if (columnTitle == RaiffeisenColumns[7])
+                    {
+                        record.TransactionType = cellValue;
+                    }
+                    else if (columnTitle == RaiffeisenColumns[8])
+                    {
+                        record.Message = cellValue;
+                    }
+                    else if (columnTitle == RaiffeisenColumns[9])
+                    {
+                        record.Note = cellValue;
+                    }
+                    else if (columnTitle == RaiffeisenColumns[10])
+                    {
+                        record.Note = cellValue;
+                    }
+                    else if (columnTitle == RaiffeisenColumns[13])
+                    {
+                        if (cellValue.StartsWith('-'))
+                        {
+                            record.OutgoingAmount = cellValue;
+                        }
+                        else
+                        {
+                            record.IncomingAmount = cellValue;
+                        }
+                    }
+                    else if (columnTitle == RaiffeisenColumns[14])
+                    {
+                        record.Currency = cellValue;
+                    }
+                    else if (columnTitle == RaiffeisenColumns[20])
+                    {
+                        record.Merchant = cellValue;
                     }
                 }
-                else if (columnTitle == RaiffeisenColumns[15])
-                {
-                    record.Currency = cellValue;
-                }
-                else if (columnTitle == RaiffeisenColumns[19])
-                {
-                    record.Merchant = cellValue;
-                }
+                result.Add(record);
             }
-            result.Add(record);
+        }
+        finally
+        {
+            package.Dispose();
         }
 
         return result;
@@ -249,18 +271,19 @@ public class SpreadsheetReader
         return true;
     }
 
-    private string[] dateFormats = ["dd.MM.yyyy", "MM/dd/yyyy"];
+    private DateTime CeskaSporitelnaParseDate(string cellValue) =>
+        ParseDate(cellValue, CeskaSporitelnaDateFormats);
 
-    private DateTime ParseDate(string cellValue)
+    private DateTime RaiffeisenParseDate(string cellValue) =>
+        ParseDate(cellValue, RaiffeisenDateFormats);
+
+    private DateTime ParseDate(string cellValue, string[] dateFormats)
     {
-        var dateHour = cellValue.Split(" ");
-        var date = dateHour[0];
-
-        if (DateTime.TryParse(date, out var processingDate) ||
-            DateTime.TryParseExact(date, dateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out processingDate))
+        if (DateTime.TryParse(cellValue, out var processingDate) ||
+            DateTime.TryParseExact(cellValue, dateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out processingDate))
         {
             return processingDate;
         }
-        throw new FormatException($"Invalid date format: {date}");
+        throw new FormatException($"Invalid date format: {cellValue}");
     }
 }
