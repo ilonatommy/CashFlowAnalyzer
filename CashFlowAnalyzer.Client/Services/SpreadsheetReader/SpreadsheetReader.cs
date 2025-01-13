@@ -206,7 +206,9 @@ public class SpreadsheetReader
                         }
                         record.ProcessingDate = RaiffeisenParseDate(cellValue);
                     }
-                    else if (columnTitle == RaiffeisenColumns[5])
+                    if (string.IsNullOrEmpty(cellValue))
+                        continue;
+                    if (columnTitle == RaiffeisenColumns[5])
                     {
                         record.PartnerAccountNumber = cellValue;
                     }
@@ -223,10 +225,6 @@ public class SpreadsheetReader
                         record.Message = cellValue;
                     }
                     else if (columnTitle == RaiffeisenColumns[9])
-                    {
-                        record.Note = cellValue;
-                    }
-                    else if (columnTitle == RaiffeisenColumns[10])
                     {
                         record.Note = cellValue;
                     }
